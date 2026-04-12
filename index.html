@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Darkfire Stonk Fund — Live Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0a0a0a; color: #d8d8d8; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+/* ── Loading bar ── */
+#loading-bar {
+  position: fixed; top: 0; left: 0; height: 2px; width: 0;
+  background: linear-gradient(90deg, #c8a84b, #f0d080);
+  z-index: 9999; transition: width 0.4s ease, opacity 0.3s;
+  box-shadow: 0 0 8px #c8a84b88;
+}
+#loading-bar.loading { animation: loadpulse 1.4s infinite ease-in-out; }
+@keyframes loadpulse {
+  0%   { width: 10%; opacity: 1; }
+  50%  { width: 75%; opacity: 1; }
+  100% { width: 95%; opacity: 0.6; }
+}
+#loading-bar.done { width: 100% !important; opacity: 0; }
+
+/* ── API Modal ── */
+#api-modal {
+  position: fixed; inset: 0; z-index: 8000;
+  background: rgba(0,0,0,0.82); display: flex;
+  align-items: center; justify-content: center;
+}
+#api-modal-box {
+  background: #111; border: 1px solid #2a2a2a; border-radius: 10px;
+  padding: 28px 30px; width: 420px; max-width: 94vw;
+}
+#api-key-input { width:100%; background:#0a0a0a; border:1px solid #2a2a2a; border-radius:4px;
+  color:#d8d8d8; padding:10px 12px; font-size:0.85rem; outline:none; margin-bottom:12px;
+  transition: border-color 0.15s; font-family: monospace; }
+#api-key-input:focus { border-color: #c8a84b55; }
+.modal-btn-primary { flex:1; background:#1c1505; border:1px solid #c8a84b;
+  border-radius:4px; color:#c8a84b; cursor:pointer; padding:10px; font-size:0.82rem;
+  font-weight:700; transition:all 0.15s; }
+.modal-btn-primary:hover { background:#2a1e08; }
+.modal-btn-secondary { background:none; border:1px solid #2a2a2a;
+  border-radius:4px; color:#555; cursor:pointer; padding:10px 14px; font-size:0.8rem;
+  transition:all 0.15s; }
+.modal-btn-secondary:hover { border-color:#444; color:#888; }
+
+/* ── Layout ── */
+.page { max-width: 1300px; margin: 0 auto; padding: 32px 24px; }
+
+/* ── Header ── */
+.header { border-bottom: 1px solid #222; padding-bottom: 24px; margin-bottom: 32px;
+  display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+.header-left h1 { font-size: 1.7rem; font-weight: 700; color: #c8a84b; letter-spacing: -0.02em; }
+.header-left p { color: #666; font-size: 0.82rem; margin-top: 4px; }
+.header-right { text-align: right; }
+.badge { display: inline-block; background: #1a1a0a; border: 1px solid #c8a84b44;
+  color: #c8a84b; padding: 4px 12px; border-radius: 4px; font-size: 0.75rem;
+  font-weight: 600; letter-spacing: 0.05em; }
+.badge.live { background: #0d1f0d; border-color: #4caf5044; color: #4caf50; }
+.badge.err  { background: #200d0d; border-color: #ef535044; color: #ef5350; }
+.updated { color: #555; font-size: 0.72rem; margin-top: 6px; }
+.header-btns { display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end; margin-bottom:6px; }
+
+/* ── Header buttons ── */
+.hdr-btn { background:none; border:1px solid #2a2a2a; border-radius:4px;
+  color:#444; cursor:pointer; padding:5px 10px; font-size:0.75rem;
+  transition:all 0.15s; display:flex; align-items:center; gap:5px; }
+.hdr-btn:hover { border-color:#c8a84b55; color:#c8a84b; }
+.hdr-btn.active { border-color:#c8a84b; color:#c8a84b; background:#1c1505; }
+.hdr-btn.spin svg { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── KPI Grid ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 28px; }
+.kpi { background: #111; border: 1px solid #1e1e1e; border-radius: 8px; padding: 18px 20px; }
+.kpi-label { font-size: 0.68rem; color: #555; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+.kpi-value { font-size: 1.6rem; font-weight: 700; color: #c8a84b; line-height: 1; }
+.kpi-value.green { color: #4caf50; }
+.kpi-value.blue  { color: #42a5f5; }
+.kpi-sub { font-size: 0.72rem; color: #444; margin-top: 6px; }
+
+/* ── Sections ── */
+.section { background: #111; border: 1px solid #1e1e1e; border-radius: 8px; padding: 22px 24px; margin-bottom: 20px; }
+.section-title { font-size: 0.78rem; color: #c8a84b; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; margin-bottom: 18px; padding-bottom: 10px;
+  border-bottom: 1px solid #1a1a1a; display: flex; align-items: center; gap: 8px;
+  position: relative; padding-right: 28px; }
+.section-title .dot { width: 6px; height: 6px; border-radius: 50%; background: #c8a84b; display: inline-block; }
+.section-title .drag-handle { top: -2px; right: 0; position: absolute; }
+
+/* ── Charts ── */
+.chart-h240 { position: relative; height: 240px; }
+.chart-h300 { position: relative; height: 300px; }
+.two-col   { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.three-col { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 20px; }
+@media(max-width: 900px) { .two-col, .three-col { grid-template-columns: 1fr; } }
+
+/* ── Tables ── */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+thead th { background: #0d0d0d; color: #555; padding: 8px 12px; text-align: left;
+  font-weight: 600; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em;
+  white-space: nowrap; border-bottom: 1px solid #1e1e1e; }
+tbody td { padding: 8px 12px; border-bottom: 1px solid #161616; white-space: nowrap; }
+tbody tr:hover td { background: #161616; }
+tbody tr:last-child td { border-bottom: none; }
+
+/* ── Tags ── */
+.tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em; }
+.tag-green  { background: #0d2414; color: #4caf50; border: 1px solid #4caf5033; }
+.tag-gold   { background: #1c1505; color: #c8a84b; border: 1px solid #c8a84b33; }
+.tag-blue   { background: #061826; color: #42a5f5; border: 1px solid #42a5f533; }
+.tag-red    { background: #200d0d; color: #ef5350; border: 1px solid #ef535033; }
+.tag-gray   { background: #1a1a1a; color: #666;    border: 1px solid #2a2a2a; }
+.tag-purple { background: #180d1e; color: #ab47bc; border: 1px solid #ab47bc33; }
+
+/* ── Trend / color helpers ── */
+.pos  { color: #4caf50; }
+.neg  { color: #ef5350; }
+.neu  { color: #666; }
+.gold { color: #c8a84b; }
+
+/* ── Mini bar ── */
+.mini-bar { height: 4px; background: #1e1e1e; border-radius: 2px; overflow: hidden; margin-top: 4px; min-width: 60px; }
+.mini-bar-fill { height: 100%; border-radius: 2px; }
+
+/* ── Thesis ── */
+.thesis { background: #0d0d0d; border: 1px solid #c8a84b22; border-radius: 6px; padding: 16px 20px; margin-bottom: 14px; }
+.thesis-title { color: #c8a84b; font-weight: 700; font-size: 0.82rem; margin-bottom: 6px; }
+.thesis p { color: #999; font-size: 0.78rem; line-height: 1.7; }
+.thesis.green { border-color: #4caf5022; }
+.thesis.green .thesis-title { color: #4caf50; }
+.thesis.blue  { border-color: #42a5f522; }
+.thesis.blue .thesis-title  { color: #42a5f5; }
+
+/* ── Trend bars (table sparkline) ── */
+.trend-bars { display: flex; gap: 2px; align-items: flex-end; height: 20px; }
+.trend-bars span { width: 5px; background: #2a2a2a; border-radius: 1px; display: block; }
+
+/* ── ROI pill ── */
+.roi-pill { padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; }
+.roi-high { background: #0d2414; color: #4caf50; }
+.roi-mid  { background: #061826; color: #42a5f5; }
+.roi-low  { background: #200d0d; color: #ef9a9a; }
+
+/* ── Drag & Drop ── */
+.drag-block { position: relative; margin-bottom: 20px; }
+.drag-block > .section,
+.drag-block > .two-col,
+.drag-block > .three-col,
+.drag-block > .kpi-grid { margin-bottom: 0; }
+.section[data-id] { margin-bottom: 20px; }
+.drag-handle {
+  position: absolute; top: 12px; right: 14px;
+  color: #2a2a2a; font-size: 1.1rem; line-height: 1;
+  cursor: grab; user-select: none;
+  opacity: 0; transition: opacity 0.15s, color 0.15s;
+  z-index: 10; letter-spacing: 2px;
+}
+.drag-block:hover .drag-handle,
+[data-id]:hover > .section-title .drag-handle { opacity: 1; }
+.drag-handle:hover { color: #c8a84b; }
+.drag-handle:active { cursor: grabbing; }
+.sortable-ghost  { opacity: 0.15 !important; background: #1a1a0a !important; border: 1px dashed #c8a84b55 !important; border-radius: 8px; }
+.sortable-chosen { box-shadow: 0 0 0 1px #c8a84b33; border-radius: 8px; }
+.sortable-drag   { opacity: 0.95 !important; }
+
+/* ── Hide / Restore ── */
+.hide-btn {
+  display: none; position: absolute; top: 10px; right: 42px;
+  background: #200d0d; border: 1px solid #ef535044; border-radius: 4px;
+  color: #ef5350; cursor: pointer; font-size: 0.75rem; font-weight: 700;
+  padding: 2px 8px; z-index: 20; transition: all 0.15s; line-height: 1.6;
+}
+.hide-btn:hover { background: #2d1010; border-color: #ef5350; }
+body.customize-mode .hide-btn { display: block; }
+body.customize-mode .drag-block { outline: 1px dashed #2a2a2a; border-radius: 8px; }
+body.customize-mode [data-id].section { outline: 1px dashed #2a2a2a; }
+#restore-panel {
+  position: fixed; bottom: 24px; right: 24px; z-index: 1000;
+  background: #111; border: 1px solid #2a2a2a; border-radius: 8px;
+  padding: 16px; min-width: 220px; max-width: 280px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.6); display: none;
+}
+#restore-panel.visible { display: block; }
+.restore-panel-title { font-size: 0.72rem; color: #c8a84b; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+.restore-item { display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 0; border-bottom: 1px solid #1a1a1a; font-size: 0.78rem; color: #888; }
+.restore-item:last-child { border-bottom: none; }
+.restore-item button { background: #0d2414; border: 1px solid #4caf5033; border-radius: 3px;
+  color: #4caf50; cursor: pointer; font-size: 0.68rem; padding: 2px 7px; transition: all 0.15s; }
+.restore-item button:hover { background: #152e1a; }
+.restore-empty { color: #333; font-size: 0.75rem; text-align: center; padding: 8px 0; }
+
+/* ── Heatmap ── */
+.heatmap-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.hm-cell { border-radius: 5px; padding: 8px 4px; text-align: center;
+  font-size: 0.7rem; cursor: default; transition: transform 0.1s;
+  min-height: 54px; display: flex; flex-direction: column;
+  justify-content: center; align-items: center; gap: 2px; }
+.hm-cell:hover { transform: scale(1.06); z-index: 1; position: relative; }
+.hm-ticker { font-weight: 700; font-size: 0.72rem; }
+.hm-val    { font-size: 0.64rem; opacity: 0.85; }
+.hm-held-dot { width: 4px; height: 4px; border-radius: 50%; background: #c8a84b; margin: 0 auto; }
+
+/* ── Position cards ── */
+.pos-cards-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.pos-card { background: #0d0d0d; border: 1px solid #1e1e1e; border-radius: 8px; padding: 18px 20px; flex: 1; min-width: 240px; }
+.gauge-track { height: 8px; background: #1a1a1a; border-radius: 4px; overflow: hidden; margin: 10px 0 8px; }
+.gauge-fill  { height: 100%; border-radius: 4px; }
+.pos-stat { display: flex; justify-content: space-between; font-size: 0.75rem;
+  padding: 4px 0; border-bottom: 1px solid #161616; }
+.pos-stat:last-child { border-bottom: none; }
+
+/* ── Fetch error banner ── */
+#fetch-error {
+  background: #200d0d; border: 1px solid #ef535033; border-radius: 6px;
+  padding: 10px 16px; margin-bottom: 20px; font-size: 0.78rem; color: #ef9a9a;
+  display: none; align-items: center; gap: 10px;
+}
+#fetch-error.visible { display: flex; }
+#fetch-error a { color: #ef5350; text-decoration: underline; cursor: pointer; }
+
+/* ── Footer ── */
+.footer { border-top: 1px solid #1a1a1a; padding-top: 20px; margin-top: 32px;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.footer p { color: #333; font-size: 0.7rem; }
+.footer .disclaimer { color: #2a2a2a; font-size: 0.65rem; max-width: 600px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<!-- ── Loading bar ── -->
+<div id="loading-bar"></div>
+
+<!-- ── API Key Modal ── -->
+<div id="api-modal" style="display:none">
+  <div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:28px 30px;width:420px;max-width:94vw">
+    <div style="color:#c8a84b;font-size:1.1rem;font-weight:700;margin-bottom:8px">🔑 Torn API Key Required</div>
+    <div style="color:#666;font-size:0.8rem;margin-bottom:16px;line-height:1.6">
+      Enter your <strong style="color:#888">Full Access</strong> API key to enable live prices, portfolio data, and MTD gains.<br>
+      Your key is stored only in this browser's local storage — never sent anywhere except directly to Torn.
+    </div>
+    <input id="api-key-input" type="password" autocomplete="off" spellcheck="false"
+      placeholder="Paste your Full Access API key here..."
+      style="width:100%;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:4px;
+      color:#d8d8d8;padding:10px 12px;font-size:0.85rem;outline:none;margin-bottom:12px;
+      font-family:monospace;transition:border-color 0.15s"
+      onkeydown="if(event.key==='Enter')submitApiKey()">
+    <div style="display:flex;gap:8px">
+      <button class="modal-btn-primary" onclick="submitApiKey()">Connect &amp; Load Live Data</button>
+      <button class="modal-btn-secondary" onclick="dismissModal()">Use Cached</button>
+    </div>
+    <div id="api-modal-err" style="color:#ef5350;font-size:0.72rem;margin-top:8px;display:none"></div>
+    <div style="color:#333;font-size:0.65rem;margin-top:14px;line-height:1.6;border-top:1px solid #1a1a1a;padding-top:10px">
+      Full Access needed for sell log (MTD realized gains). Limited key works for prices + portfolio only.<br>
+      Get your key at: torn.com → Settings → API Key
+    </div>
+  </div>
+</div>
+
+<div class="page">
+
+<!-- ── HEADER ── -->
+<div class="header">
+  <div class="header-left">
+    <h1>Darkfire Stonk Fund</h1>
+    <p>Torn City Stock Market — Investor Performance Report</p>
+  </div>
+  <div class="header-right">
+    <div class="header-btns">
+      <button class="hdr-btn" id="refreshBtn" onclick="doRefresh()" title="Fetch fresh data from Torn API">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        Refresh
+      </button>
+      <button class="hdr-btn" id="customizeBtn" onclick="toggleCustomize()">⚙ Customize</button>
+      <span class="badge" id="liveBadge">CACHED DATA</span>
+    </div>
+    <div class="updated" id="lastUpdated">Cached: April 10, 2026 · Manager: Darkfire [#1631210]</div>
+  </div>
+</div>
+
+<!-- Fetch error banner -->
+<div id="fetch-error">
+  <span>⚠</span>
+  <span id="fetch-error-msg">Could not load live data.</span>
+  <a onclick="showApiModal()">Re-enter key</a>
+  &nbsp;·&nbsp;
+  <a onclick="document.getElementById('fetch-error').classList.remove('visible')">Dismiss</a>
+</div>
+
+<div id="sortable-container">
+
+<!-- ── KPIs ── -->
+<div class="drag-block" data-id="kpis">
+<span class="drag-handle" title="Drag to reorder">⠿</span>
+<button class="hide-btn" onclick="hideSection('kpis')">✕ Hide</button>
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-label">Total Assets Under Management</div>
+    <div class="kpi-value" id="aum-val">—</div>
+    <div class="kpi-sub" id="aum-sub">Loading…</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">39th Street Fund Balance</div>
+    <div class="kpi-value">$200.8B</div>
+    <div class="kpi-sub">Mar 2026 closing balance</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Avg Monthly Return</div>
+    <div class="kpi-value blue">+1.89%</div>
+    <div class="kpi-sub">22-month track record (Jun 2024 – Mar 2026)</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Best Month</div>
+    <div class="kpi-value blue">+3.45%</div>
+    <div class="kpi-sub">Nov 2024 — highest single-month return</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">MTD Net Gain</div>
+    <div class="kpi-value green" id="mtd-val">—</div>
+    <div class="kpi-sub" id="mtd-val-sub">realized gains · completed sells</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">MTD ROI</div>
+    <div class="kpi-value green" id="mtd-roi">—</div>
+    <div class="kpi-sub" id="mtd-roi-sub">gross gain ÷ $433.46B Apr 1 opening</div>
+  </div>
+</div>
+</div><!-- end kpis -->
+
+<!-- ── FUND GROWTH + PIE ── -->
+<div class="drag-block" data-id="charts-main">
+<span class="drag-handle" title="Drag to reorder">⠿</span>
+<button class="hide-btn" onclick="hideSection('charts-main')">✕ Hide</button>
+<div class="three-col" style="margin-bottom:0">
+  <div class="section">
+    <div class="section-title"><span class="dot"></span>39th Street Fund Growth ($B)</div>
+    <div class="chart-h300"><canvas id="growthChart"></canvas></div>
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="dot"></span>Portfolio Allocation (Live)</div>
+    <div class="chart-h300"><canvas id="pieChart"></canvas></div>
+  </div>
+</div>
+</div><!-- end charts-main -->
+
+<!-- ── ROI CHART + DISTRIBUTION ── -->
+<div class="drag-block" data-id="charts-roi">
+<span class="drag-handle" title="Drag to reorder">⠿</span>
+<button class="hide-btn" onclick="hideSection('charts-roi')">✕ Hide</button>
+<div class="two-col" style="margin-bottom:0">
+  <div class="section">
+    <div class="section-title"><span class="dot"></span>Monthly Return % — 39th Street Fund</div>
+    <div class="chart-h240"><canvas id="roiChart"></canvas></div>
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="dot"></span>Return Distribution</div>
+    <div class="chart-h240"><canvas id="distChart"></canvas></div>
+  </div>
+</div>
+</div><!-- end charts-roi -->
+
+<!-- ── INVESTMENT THESIS ── -->
+<div class="section" data-id="thesis" style="margin-bottom:20px;position:relative">
+  <button class="hide-btn" onclick="hideSection('thesis')" style="top:10px;right:40px">✕ Hide</button>
+  <div class="section-title"><span class="dot"></span>Active Investment Thesis<span class="drag-handle">⠿</span></div>
+  <div class="two-col" style="margin-bottom:0">
+    <div>
+      <div class="thesis">
+        <div class="thesis-title">📍 Core Position: Lucky Shot Casino (LSC) — Buy-the-Dip</div>
+        <p>LSC represents a dominant share of AUM. The investment thesis rests on price recovery from yearly lows. Yearly appreciation stands at just <strong>+2.12%</strong>, but the past month alone delivered <strong>+4.07%</strong> — meaning the entire year's gains arrived in the last 30 days, confirming the stock was below its yearly baseline for most of the prior year and is now in a recovery breakout. High-conviction position actively driving portfolio returns.</p>
+      </div>
+      <div class="thesis green">
+        <div class="thesis-title">📍 Secondary Position: Yazoo (YAZ) — Buy-the-Dip</div>
+        <p>YAZ holds a significant share of AUM with 1.04B shares. The yearly return is only <strong>+2.10%</strong>, but monthly is <strong>+4.70%</strong> and weekly is <strong>+2.80%</strong> — the strongest weekly gain of any tracked stock. Like LSC, the entire year's appreciation is occurring right now, signaling a momentum shift after an extended period at the yearly floor.</p>
+      </div>
+    </div>
+    <div>
+      <div class="thesis blue">
+        <div class="thesis-title">🎯 Top 5 Near-Term Buy Picks</div>
+        <p style="margin-bottom:10px">Stocks most behind their own historical monthly pace — mean-reversion candidates for a quick flip. Scored by <strong>monthly lag</strong> (expected monthly rate minus actual d30), with a bonus when weekly momentum is accelerating. Active positions excluded.</p>
+        <div id="topPicksList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── APRIL TRADE WATERFALL ── -->
+<div class="drag-block" data-id="trades">
+<span class="drag-handle" title="Drag to reorder">⠿</span>
+<button class="hide-btn" onclick="hideSection('trades')">✕ Hide</button>
+<div class="two-col" style="margin-bottom:0">
+  <div class="section">
+    <div class="section-title"><span class="dot"></span><span id="waterfallTitle">MTD Trade Waterfall</span></div>
+    <div class="chart-h240"><canvas id="waterfallChart"></canvas></div>
+  </div>
+  <div class="section">
+    <div class="section-title"><span class="dot"></span><span id="tradeLogTitle">Closed Trades — This Month</span></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Stock</th><th>Shares Sold</th><th>Avg Price</th><th>Realized Profit</th><th>Running Total</th></tr></thead>
+        <tbody id="tradeLogTable"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid #1a1a1a;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:0.72rem;color:#555">MTD Total</span>
+      <span style="font-size:1.1rem;font-weight:700;color:#4caf50" id="tradeMtdTotal">—</span>
+    </div>
+  </div>
+</div>
+</div><!-- end trades -->
+
+<!-- ── ACTIVE POSITION MONITOR ── -->
+<div class="drag-block" data-id="positions">
+<span class="drag-handle" title="Drag to reorder">⠿</span>
+<button class="hide-btn" onclick="hideSection('positions')">✕ Hide</button>
+<div class="section" style="margin-bottom:0">
+  <div class="section-title"><span class="dot"></span>Active Position Monitor<span class="drag-handle">⠿</span></div>
+  <div class="pos-cards-row" id="positionCards"></div>
+</div>
+</div><!-- end positions -->
+
+<!-- ── PORTFOLIO HEATMAP ── -->
+<div class="drag-block" data-id="heatmap">
+<span class="drag-handle" title="Drag to reorder">⠿</span>
+<button class="hide-btn" onclick="hideSection('heatmap')">✕ Hide</button>
+<div class="section" style="margin-bottom:0">
+  <div class="section-title"><span class="dot"></span>Portfolio Heatmap — 1-Month Performance<span class="drag-handle">⠿</span></div>
+  <div style="font-size:0.7rem;color:#444;margin-bottom:12px">All 35 stocks colored by 30-day return. Gold dot = currently held. Hover for details.</div>
+  <div class="heatmap-grid" id="heatmapGrid"></div>
+  <div style="margin-top:14px;display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+    <span style="font-size:0.68rem;color:#444">Scale →</span>
+    <div style="display:flex;gap:4px;align-items:center"><div style="width:36px;height:7px;background:#3d1212;border-radius:2px"></div><span style="font-size:0.65rem;color:#555">&lt;0.5%</span></div>
+    <div style="display:flex;gap:4px;align-items:center"><div style="width:36px;height:7px;background:#3d2e08;border-radius:2px"></div><span style="font-size:0.65rem;color:#555">0.5–1%</span></div>
+    <div style="display:flex;gap:4px;align-items:center"><div style="width:36px;height:7px;background:#3d3a08;border-radius:2px"></div><span style="font-size:0.65rem;color:#555">1–2%</span></div>
+    <div style="display:flex;gap:4px;align-items:center"><div style="width:36px;height:7px;background:#0d2e14;border-radius:2px"></div><span style="font-size:0.65rem;color:#555">2–3%</span></div>
+    <div style="display:flex;gap:4px;align-items:center"><div style="width:36px;height:7px;background:#0d4020;border-radius:2px"></div><span style="font-size:0.65rem;color:#555">&gt;3%</span></div>
+    <div style="display:flex;gap:4px;align-items:center"><div style="width:10px;height:10px;border-radius:50%;background:#c8a84b"></div><span style="font-size:0.65rem;color:#555">held</span></div>
+  </div>
+</div>
+</div><!-- end heatmap -->
+
+<!-- ── HOLDINGS TABLE ── -->
+<div class="section" data-id="holdings" style="margin-bottom:20px;position:relative">
+  <button class="hide-btn" onclick="hideSection('holdings')" style="top:10px;right:40px">✕ Hide</button>
+  <div class="section-title"><span class="dot"></span>Current Holdings — Price Performance<span class="drag-handle">⠿</span></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Stock</th><th>Type</th><th>Shares</th><th>Price</th><th>Portfolio Value</th><th>Allocation</th><th>Since Buy</th><th>24h Δ</th><th>7d Δ</th><th>1m Δ</th><th>1y Δ</th><th>Trend</th></tr></thead>
+      <tbody id="holdingsTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── MARKET SCANNER ── -->
+<div class="section" data-id="market" style="margin-bottom:20px;position:relative">
+  <button class="hide-btn" onclick="hideSection('market')" style="top:10px;right:40px">✕ Hide</button>
+  <div class="section-title"><span class="dot"></span>Full Market Scanner — All 35 Stocks<span class="drag-handle">⠿</span></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Stock</th><th>Price</th><th>24h Δ</th><th>7d Δ</th><th>1m Δ</th><th>1y Δ</th><th>1m/1y Ratio</th><th>Held</th><th>Signal</th></tr></thead>
+      <tbody id="marketTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── ROI HISTORY ── -->
+<div class="section" data-id="history" style="margin-bottom:20px;position:relative">
+  <button class="hide-btn" onclick="hideSection('history')" style="top:10px;right:40px">✕ Hide</button>
+  <div class="section-title"><span class="dot"></span>Monthly Performance History — 39th Street Fund<span class="drag-handle">⠿</span></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Period</th><th>Start Balance</th><th>End Balance</th><th>Monthly Gain</th><th>Return %</th><th>vs Benchmark (1.89%)</th><th>Cumulative Return</th></tr></thead>
+      <tbody id="roiTable"></tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- end #sortable-container -->
+
+<!-- ── FOOTER ── -->
+<div class="footer">
+  <div class="disclaimer">Past performance does not guarantee future results. All figures denominated in Torn City dollars ($). Price data sourced live from torn.com stock market API. This report is for investor informational purposes only.</div>
+  <p>Darkfire Stonk Fund · Torn City · <span id="footerYear">2026</span></p>
+</div>
+</div><!-- end .page -->
+
+<!-- ── RESTORE PANEL ── -->
+<div id="restore-panel">
+  <div class="restore-panel-title">🗂 Hidden Sections</div>
+  <div id="restore-list"><div class="restore-empty">No hidden sections</div></div>
+</div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════════
+//  STATIC DATA — historical + stock definitions
+// ═══════════════════════════════════════════════════════════
+
+const APRIL_START = 433464353059;  // Apr 1, 2026 opening balance — locked
+const AVG_ROI     = 1.889;
+
+// Stocks flagged as active trading positions (not passive benefit holds)
+const ACTIVE_TICKERS = new Set(['LSC', 'YAZ']);
+
+const MONTHS_SHORT = [
+  'Jun\'24','Jul\'24','Aug\'24','Sep\'24','Oct\'24','Nov\'24',
+  'Dec\'24','Jan\'25','Feb\'25','Mar\'25','Apr\'25','May\'25',
+  'Jun\'25','Jul\'25','Aug\'25','Sep\'25','Oct\'25','Nov\'25',
+  'Dec\'25','Jan\'26','Feb\'26','Mar\'26'
+];
+const MONTHS_FULL = [
+  'Jun 2024','Jul 2024','Aug 2024','Sep 2024','Oct 2024','Nov 2024',
+  'Dec 2024','Jan 2025','Feb 2025','Mar 2025','Apr 2025','May 2025',
+  'Jun 2025','Jul 2025','Aug 2025','Sep 2025','Oct 2025','Nov 2025',
+  'Dec 2025','Jan 2026','Feb 2026','Mar 2026'
+];
+const fund39Start = [38000,47901,58447,59908,70987,89939,92646,95083,96471,103193,112245,112380,121538,134672,129397,140399,149763,157774,165287,171915,178490,196667];
+const fund39End   = [38416,48447,59908,60987,72364,92646,95083,96471,98193,104245,112380,114538,125172,136907,132399,143263,152773,160787,167915,175990,182167,200816];
+
+// ═══════════════════════════════════════════════════════════
+//  MUTABLE STATE — patched by live API fetch
+// ═══════════════════════════════════════════════════════════
+
+// Default data from Apr 10 2026 snapshot (shown immediately on load)
+// d1/d7/d30/d365 from Torn UI Apr 10 — updated when API provides them
+let allStocks = [
+  {name:'Torn & Shanghai Banking',  ticker:'TSB', price:1189.91, d1:0.75, d7:0.94,  d30:0.16, d365:4.95,  held:false, shares:0,          unrlzPct:null},
+  {name:'Torn City Investments',    ticker:'TCI', price:1183.94, d1:1.20, d7:1.46,  d30:0.95, d365:4.16,  held:true,  shares:1500000,    unrlzPct:-1.165},
+  {name:'Crude & Co',               ticker:'CNC', price:893.95,  d1:0.17, d7:0.53,  d30:0.93, d365:7.89,  held:false, shares:0,          unrlzPct:null},
+  {name:'Feathery Hotels Group',    ticker:'FHG', price:880.02,  d1:3.88, d7:1.79,  d30:3.89, d365:7.71,  held:true,  shares:6000000,    unrlzPct:5.488},
+  {name:'Mc Smoogle Corp',          ticker:'MCS', price:812.94,  d1:1.35, d7:1.80,  d30:2.04, d365:5.71,  held:true,  shares:10850000,   unrlzPct:3.52},
+  {name:'Wind Lines Travel',        ticker:'WLT', price:791.29,  d1:0.04, d7:1.75,  d30:0.13, d365:7.11,  held:true,  shares:9000000,    unrlzPct:0.887},
+  {name:'Symbiotic Ltd.',           ticker:'SYM', price:714.27,  d1:0.21, d7:0.95,  d30:0.17, d365:2.88,  held:true,  shares:1500000,    unrlzPct:3.959},
+  {name:'Syscore MFG',              ticker:'SYS', price:682.65,  d1:0.13, d7:0.31,  d30:1.48, d365:4.56,  held:false, shares:0,          unrlzPct:null},
+  {name:'Evil Ducks Candy Corp',    ticker:'EVL', price:657.61,  d1:0.78, d7:0.12,  d30:0.60, d365:4.28,  held:false, shares:0,          unrlzPct:null},
+  {name:'Performance Ribaldry',     ticker:'PRN', price:606.68,  d1:1.59, d7:0.41,  d30:1.43, d365:1.63,  held:true,  shares:1000000,    unrlzPct:1.669},
+  {name:'Munster Beverage Corp.',   ticker:'MUN', price:561.08,  d1:0.93, d7:0.72,  d30:0.63, d365:5.15,  held:true,  shares:5000000,    unrlzPct:0.619},
+  {name:'Lucky Shot Casino',        ticker:'LSC', price:542.66,  d1:0.26, d7:0.77,  d30:4.07, d365:2.12,  held:true,  shares:627147883,  unrlzPct:-1.276},
+  {name:'International School TC',  ticker:'IST', price:520.89,  d1:0.70, d7:0.58,  d30:0.68, d365:1.50,  held:false, shares:0,          unrlzPct:null},
+  {name:'TC Media Productions',     ticker:'TCP', price:515.75,  d1:0.42, d7:0.80,  d30:1.97, d365:3.97,  held:false, shares:0,          unrlzPct:null},
+  {name:'Torn City Clothing',       ticker:'TCC', price:508.35,  d1:0.27, d7:0.34,  d30:0.38, d365:4.86,  held:false, shares:0,          unrlzPct:null},
+  {name:'Big Al\'s Gun Shop',       ticker:'BAG', price:503.46,  d1:1.52, d7:0.20,  d30:1.25, d365:7.43,  held:true,  shares:9000000,    unrlzPct:4.038},
+  {name:'Legal Authorities Group',  ticker:'LAG', price:456.50,  d1:0.21, d7:1.61,  d30:1.41, d365:1.95,  held:false, shares:0,          unrlzPct:null},
+  {name:'Herbal Releaf Co.',        ticker:'CBD', price:406.19,  d1:0.06, d7:0.32,  d30:0.35, d365:7.48,  held:false, shares:0,          unrlzPct:null},
+  {name:'Torn City Health Service', ticker:'THS', price:383.97,  d1:1.54, d7:0.77,  d30:1.82, d365:6.17,  held:true,  shares:6717358,    unrlzPct:0.966},
+  {name:'Alcoholics Synonymous',    ticker:'ASS', price:358.65,  d1:1.43, d7:0.73,  d30:1.52, d365:3.41,  held:false, shares:0,          unrlzPct:null},
+  {name:'The Torn City Times',      ticker:'TCT', price:324.83,  d1:0.92, d7:0.08,  d30:1.47, d365:0.82,  held:true,  shares:100000,     unrlzPct:-0.457},
+  {name:'Empty Lunchbox Traders',   ticker:'ELT', price:312.38,  d1:0.25, d7:0.05,  d30:0.30, d365:0.68,  held:false, shares:0,          unrlzPct:null},
+  {name:'Grain',                    ticker:'GRN', price:310.66,  d1:0.09, d7:0.93,  d30:0.36, d365:4.11,  held:true,  shares:500000,     unrlzPct:0.801},
+  {name:'Torn City Motors',         ticker:'TCM', price:302.05,  d1:0.21, d7:0.45,  d30:0.07, d365:4.39,  held:true,  shares:1000000,    unrlzPct:5.771},
+  {name:'Eaglewood Mercenary',      ticker:'EWM', price:287.65,  d1:0.70, d7:0.25,  d30:0.66, d365:3.94,  held:true,  shares:1000000,    unrlzPct:3.056},
+  {name:'Messaging Inc.',           ticker:'MSG', price:285.61,  d1:0.30, d7:0.24,  d30:1.96, d365:11.48, held:false, shares:0,          unrlzPct:null},
+  {name:'Home Retail Group',        ticker:'HRG', price:270.48,  d1:0.42, d7:0.77,  d30:0.61, d365:2.34,  held:false, shares:0,          unrlzPct:null},
+  {name:'TC Music Industries',      ticker:'TMI', price:230.95,  d1:1.13, d7:0.05,  d30:0.86, d365:3.67,  held:true,  shares:6000000,    unrlzPct:3.858},
+  {name:'Insured On Us',            ticker:'IOU', price:177.00,  d1:0.06, d7:0.29,  d30:0.28, d365:3.76,  held:true,  shares:3000000,    unrlzPct:-0.612},
+  {name:'Tell Group Plc.',          ticker:'TGP', price:149.71,  d1:0.29, d7:1.38,  d30:1.59, d365:6.95,  held:false, shares:0,          unrlzPct:null},
+  {name:'I Industries Ltd.',        ticker:'IIL', price:131.84,  d1:0.19, d7:0.72,  d30:0.49, d365:6.09,  held:true,  shares:1719550,    unrlzPct:3.121},
+  {name:'West Side University',     ticker:'WSU', price:110.57,  d1:0.02, d7:0.35,  d30:2.41, d365:9.53,  held:false, shares:0,          unrlzPct:null},
+  {name:'Lo Squalo Waste',          ticker:'LOS', price:109.40,  d1:0.44, d7:0.39,  d30:0.16, d365:0.41,  held:true,  shares:7500000,    unrlzPct:1.287},
+  {name:'PointLess',                ticker:'PTS', price:77.35,   d1:1.26, d7:0.19,  d30:1.41, d365:2.61,  held:true,  shares:10000000,   unrlzPct:3.202},
+  {name:'Yazoo',                    ticker:'YAZ', price:51.53,   d1:0.12, d7:2.80,  d30:4.70, d365:2.10,  held:true,  shares:1048986403, unrlzPct:0.144},
+];
+
+// Default MTD trades (Apr 2026 — updated by live sell log)
+let mtdGain   = 464451820;
+let mtdTrades = [
+  { date:'Apr 4', ticker:'SYS', name:'Syscore MFG',     shares:15000000,  price:682.98, profit:37800000  },
+  { date:'Apr 8', ticker:'MCS', name:'Mc Smoogle Corp', shares:11200000,  price:817.18, profit:196100000 },
+  { date:'Apr 9', ticker:'SYS', name:'Syscore MFG',     shares:51813853,  price:686.21, profit:230551820 },
+];
+
+// Month label for the trade section (e.g. "April 2026")
+let mtdMonthLabel = 'April 2026';
+
+// ═══════════════════════════════════════════════════════════
+//  CHART REGISTRY — destroy before recreate on re-render
+// ═══════════════════════════════════════════════════════════
+const charts = {};
+function destroyChart(id) {
+  if (charts[id]) { try { charts[id].destroy(); } catch(e){} delete charts[id]; }
+}
+
+Chart.defaults.color       = '#555';
+Chart.defaults.borderColor = '#1a1a1a';
+
+const gridOpts = (yLabel = '') => ({
+  responsive: true, maintainAspectRatio: false,
+  plugins: {
+    legend: { labels: { color: '#666', font: { size: 10 }, boxWidth: 12 } },
+    tooltip: { mode: 'index', intersect: false, backgroundColor: '#1a1a1a',
+      titleColor: '#c8a84b', bodyColor: '#aaa', borderColor: '#2a2a2a', borderWidth: 1 }
+  },
+  scales: {
+    x: { ticks: { color: '#444', font: { size: 9 }, maxRotation: 45 }, grid: { color: '#141414' } },
+    y: { ticks: { color: '#444', font: { size: 10 } }, grid: { color: '#141414' },
+      title: yLabel ? { display: true, text: yLabel, color: '#444', font: { size: 10 } } : undefined }
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+//  HELPER — compute derived portfolio data from allStocks
+// ═══════════════════════════════════════════════════════════
+function getPortfolio() {
+  // Coerce price/shares to numbers defensively (Torn API can return strings)
+  const holdings   = allStocks.filter(s => s.held).map(s => ({
+    ...s,
+    price:  +s.price  || 0,
+    shares: +s.shares || 0,
+    d1: +s.d1 || 0, d7: +s.d7 || 0, d30: +s.d30 || 0, d365: +s.d365 || 0,
+    get value() { return this.shares * this.price; }
+  })).map(s => ({ ...s, value: s.shares * s.price }));
+  const totalValue = holdings.reduce((a, h) => a + h.value, 0);
+  return { holdings, totalValue };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER — KPIs
+// ═══════════════════════════════════════════════════════════
+function renderKPIs() {
+  const { holdings, totalValue } = getPortfolio();
+  document.getElementById('aum-val').textContent =
+    `$${(totalValue / 1e9).toFixed(1)}B`;
+  document.getElementById('aum-sub').textContent =
+    `${holdings.length} positions held`;
+
+  const gain = mtdGain;
+  const roi  = gain / APRIL_START * 100;
+  const absM = Math.abs(gain) / 1e6;
+  const sign = gain >= 0 ? '+' : '-';
+
+  document.getElementById('mtd-val').textContent =
+    `${sign}$${absM.toFixed(1)}M`;
+  document.getElementById('mtd-roi').textContent =
+    `${gain >= 0 ? '+' : ''}${roi.toFixed(3)}%`;
+
+  const tradeCount = mtdTrades.length;
+  document.getElementById('mtd-val-sub').textContent =
+    `realized gains · ${tradeCount} sell${tradeCount !== 1 ? 's' : ''} closed`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER — Charts (growth, pie, ROI bar, distribution)
+// ═══════════════════════════════════════════════════════════
+function renderCharts() {
+  const { holdings, totalValue } = getPortfolio();
+
+  // Fund growth line chart (static historical data)
+  destroyChart('growth');
+  charts['growth'] = new Chart(document.getElementById('growthChart'), {
+    type: 'line',
+    data: {
+      labels: MONTHS_SHORT,
+      datasets: [{
+        label: '39th Street Fund ($B)',
+        data: fund39End.map(v => +(v / 1000).toFixed(1)),
+        borderColor: '#c8a84b', backgroundColor: '#c8a84b18',
+        tension: 0.4, fill: true, pointRadius: 3, pointHoverRadius: 6,
+        pointBackgroundColor: '#c8a84b'
+      }]
+    },
+    options: { ...gridOpts('Balance ($B)'), plugins: { ...gridOpts().plugins, legend: { display: false } } }
+  });
+
+  // Portfolio pie (live holdings)
+  destroyChart('pie');
+  const sorted = [...holdings].sort((a, b) => b.value - a.value);
+  const top6   = sorted.slice(0, 6);
+  const other  = totalValue - top6.reduce((a, h) => a + h.value, 0);
+  charts['pie'] = new Chart(document.getElementById('pieChart'), {
+    type: 'doughnut',
+    data: {
+      labels: [...top6.map(h => h.ticker), `Other (${holdings.length - 6})`],
+      datasets: [{
+        data: [...top6.map(h => +(h.value / totalValue * 100).toFixed(2)), +(other / totalValue * 100).toFixed(2)],
+        backgroundColor: ['#c8a84b','#42a5f5','#4caf50','#ab47bc','#ff7043','#26a69a','#546e7a'],
+        borderColor: '#111', borderWidth: 2, hoverOffset: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { color: '#666', font: { size: 10 }, boxWidth: 10, padding: 8 } },
+        tooltip: { backgroundColor: '#1a1a1a', titleColor: '#c8a84b', bodyColor: '#aaa',
+          borderColor: '#2a2a2a', borderWidth: 1,
+          callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}%` } }
+      }
+    }
+  });
+
+  // Monthly ROI bar
+  const roi39 = fund39Start.map((s, i) => ((fund39End[i] - s) / s * 100));
+  destroyChart('roi');
+  charts['roi'] = new Chart(document.getElementById('roiChart'), {
+    type: 'bar',
+    data: {
+      labels: MONTHS_SHORT,
+      datasets: [
+        { label: 'Monthly Return %', data: roi39.map(r => +r.toFixed(3)),
+          backgroundColor: roi39.map(r => r >= AVG_ROI ? '#c8a84b99' : '#ef535066'),
+          borderColor:     roi39.map(r => r >= AVG_ROI ? '#c8a84b'   : '#ef5350'), borderWidth: 1 },
+        { label: `Avg (${AVG_ROI}%)`, data: MONTHS_SHORT.map(() => AVG_ROI),
+          type: 'line', borderColor: '#42a5f5', borderWidth: 1.5, borderDash: [5,4],
+          pointRadius: 0, fill: false }
+      ]
+    },
+    options: { ...gridOpts('Return %'), scales: { ...gridOpts().scales, x: { ...gridOpts().scales.x, ticks: { ...gridOpts().scales.x.ticks, maxRotation: 55 } } } }
+  });
+
+  // Return distribution histogram
+  const bins = ['0–0.5%','0.5–1.0%','1.0–1.5%','1.5–2.0%','2.0–2.5%','2.5–3.0%','3.0–3.5%'];
+  const bCounts = bins.map((_, i) => roi39.filter(r => r >= i * 0.5 && r < (i + 1) * 0.5).length);
+  destroyChart('dist');
+  charts['dist'] = new Chart(document.getElementById('distChart'), {
+    type: 'bar',
+    data: {
+      labels: bins,
+      datasets: [{
+        label: 'Months in Range', data: bCounts,
+        backgroundColor: bins.map((_, i) => i >= 3 ? '#c8a84b99' : '#42a5f544'),
+        borderColor:     bins.map((_, i) => i >= 3 ? '#c8a84b'   : '#42a5f5'), borderWidth: 1
+      }]
+    },
+    options: { ...gridOpts('# of Months'), plugins: { ...gridOpts().plugins, legend: { display: false } } }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER — Top 5 Near-Term Buy Picks
+// ═══════════════════════════════════════════════════════════
+function renderTopPicks() {
+  const topPicks = [...allStocks]
+    .filter(s => !ACTIVE_TICKERS.has(s.ticker) && s.d365 > 0)
+    .map(s => {
+      const expectedMonthly  = s.d365 / 12;
+      const lag              = expectedMonthly - s.d30;
+      const weeklyDailyRate  = s.d7 / 7;
+      const monthlyDailyRate = s.d30 / 30;
+      const weeklyAccel      = weeklyDailyRate > monthlyDailyRate * 1.5;
+      const score            = lag * 2 + (weeklyAccel ? 0.4 : 0);
+      return { ...s, lag, expectedMonthly, weeklyAccel, score };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+
+  const rankColors = ['#c8a84b','#42a5f5','#4caf50','#ab47bc','#ef9a9a'];
+  const rankLabels = ['#1','#2','#3','#4','#5'];
+  const pickTheses = [
+    s => s.weeklyAccel ? `Weekly pace (${s.d7.toFixed(2)}% / 7d) is accelerating vs flat month — momentum building` : `Only +${s.d30.toFixed(2)}% this month vs +${s.d365.toFixed(2)}% annual — most overdue for catch-up`,
+    s => `Lagging ${(s.expectedMonthly - s.d30).toFixed(3)}% below expected monthly pace${s.weeklyAccel ? ' · weekly waking up' : ''}`,
+    s => `d365 +${s.d365.toFixed(2)}% yearly but d30 only +${s.d30.toFixed(2)}% — extended dormancy`,
+    s => `Solid annual performer (+${s.d365.toFixed(2)}%) sitting out this month — catch-up candidate`,
+    s => `Monthly underperformance vs yearly trend; watch d7 for early confirmation`,
+  ];
+
+  const el = document.getElementById('topPicksList');
+  el.innerHTML = '';
+  topPicks.forEach((s, i) => {
+    const lagColor   = s.lag > 0.2 ? '#4caf50' : s.lag > 0 ? '#c8a84b' : '#ef5350';
+    const accelTag   = s.weeklyAccel ? `<span class="tag tag-green" style="font-size:0.6rem;margin-left:4px">↑ WAKING UP</span>` : '';
+    const heldTag    = s.held        ? `<span class="tag tag-gold"  style="font-size:0.6rem;margin-left:4px">HELD</span>` : '';
+    const thesis     = pickTheses[Math.min(i, pickTheses.length - 1)](s);
+    el.innerHTML += `
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #1a1a1a${i===4?';border-bottom:none':''}">
+        <div style="min-width:28px;height:28px;border-radius:50%;background:${rankColors[i]}22;border:1px solid ${rankColors[i]}44;
+          display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:700;color:${rankColors[i]};flex-shrink:0">
+          ${rankLabels[i]}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:3px">
+            <strong style="color:#d8d8d8;font-size:0.84rem">${s.ticker}</strong>
+            <span style="color:#444;font-size:0.72rem">${s.name}</span>
+            ${accelTag}${heldTag}
+          </div>
+          <div style="display:flex;gap:10px;font-size:0.72rem;color:#555;margin-bottom:4px">
+            <span>1m: <strong class="pos">+${s.d30.toFixed(2)}%</strong></span>
+            <span>7d: <strong style="color:#42a5f5">+${s.d7.toFixed(2)}%</strong></span>
+            <span>1d: <strong style="color:#888">+${s.d1.toFixed(2)}%</strong></span>
+            <span>1y: <strong style="color:#666">+${s.d365.toFixed(2)}%</strong></span>
+            <span>lag: <strong style="color:${lagColor}">${s.lag >= 0 ? '+' : ''}${s.lag.toFixed(3)}%</strong></span>
+          </div>
+          <div style="font-size:0.72rem;color:#555;line-height:1.4">${thesis}</div>
+        </div>
+      </div>`;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER — Trade Waterfall
+// ═══════════════════════════════════════════════════════════
+function renderWaterfall() {
+  // Update section title labels
+  const now = new Date();
+  const monthName = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+  document.getElementById('waterfallTitle').textContent = `${monthName} — Trade Waterfall`;
+  document.getElementById('tradeLogTitle').textContent  = `Closed Trades — ${monthName}`;
+
+  // Sort trades chronologically
+  const trades = [...mtdTrades];
+
+  const profitsM  = trades.map(t => +(t.profit / 1e6).toFixed(2));
+  const labels    = trades.map(t => `${t.date} · ${t.ticker}`);
+  let cum = 0;
+  const running   = trades.map(t => { cum += t.profit / 1e6; return +cum.toFixed(2); });
+
+  destroyChart('waterfall');
+  const cvs = document.getElementById('waterfallChart');
+
+  if (trades.length === 0) {
+    // No trades yet this month
+    cvs.closest('.section').querySelector('.chart-h240').style.display = 'flex';
+    cvs.closest('.chart-h240').innerHTML = '<div style="color:#333;font-size:0.8rem;margin:auto">No closed trades this month yet.</div>';
+    document.getElementById('tradeLogTable').innerHTML = '';
+    document.getElementById('tradeMtdTotal').textContent = '$0';
+    return;
+  }
+
+  charts['waterfall'] = new Chart(cvs, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Trade Profit ($M)', data: profitsM,
+          backgroundColor: profitsM.map(() => '#4caf5088'),
+          borderColor:     profitsM.map(() => '#4caf50'),
+          borderWidth: 1, borderRadius: 4, yAxisID: 'y' },
+        { label: 'Running Total ($M)', data: running,
+          type: 'line', borderColor: '#42a5f5', backgroundColor: '#42a5f518',
+          borderWidth: 2, pointRadius: 5, pointBackgroundColor: '#42a5f5',
+          fill: false, tension: 0.3, yAxisID: 'y' }
+      ]
+    },
+    options: { ...gridOpts('Profit ($M)'), plugins: { ...gridOpts().plugins,
+      tooltip: { ...gridOpts().plugins.tooltip,
+        callbacks: { label: ctx => ` ${ctx.dataset.label}: +$${ctx.raw.toFixed(1)}M` } } } }
+  });
+
+  // Trade log table
+  const tlt = document.getElementById('tradeLogTable');
+  tlt.innerHTML = '';
+  let running2 = 0;
+  trades.forEach(t => {
+    running2 += t.profit;
+    tlt.innerHTML += `
+      <tr>
+        <td><strong style="color:#c8a84b">${t.date}</strong></td>
+        <td><strong>${t.ticker}</strong> <span style="color:#444;font-size:0.72rem">${t.name}</span></td>
+        <td style="color:#555;font-size:0.75rem">${t.shares.toLocaleString()}</td>
+        <td>$${t.price > 0 ? t.price.toFixed(2) : '—'}</td>
+        <td class="pos">+$${(t.profit / 1e6).toFixed(1)}M</td>
+        <td style="color:#42a5f5">+$${(running2 / 1e6).toFixed(1)}M</td>
+      </tr>`;
+  });
+
+  const totalM = mtdGain / 1e6;
+  document.getElementById('tradeMtdTotal').textContent =
+    `+$${totalM >= 1000 ? (totalM / 1000).toFixed(2) + 'B' : totalM.toFixed(1) + 'M'}`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER — Active Position Monitor
+// ═══════════════════════════════════════════════════════════
+function renderPositionCards() {
+  const container  = document.getElementById('positionCards');
+  container.innerHTML = '';
+  const activePositions = allStocks.filter(s => ACTIVE_TICKERS.has(s.ticker) && s.held);
+
+  if (activePositions.length === 0) {
+    container.innerHTML = '<div style="color:#333;font-size:0.8rem;padding:12px">No active trading positions.</div>';
+    return;
+  }
+
+  activePositions.forEach(p => {
+    if (!p.held || p.shares === 0) return;
+    const posValue = p.shares * p.price;
+    const avgCost  = p.unrlzPct !== null
+      ? p.price / (1 + p.unrlzPct / 100)
+      : p.price; // fallback if unrealized unknown
+    const unrealizedDollars = p.shares * (p.price - avgCost);
+    const pct      = p.unrlzPct !== null ? p.unrlzPct : 0;
+    const pctSign  = pct >= 0 ? '+' : '';
+    const dolAmt   = Math.abs(unrealizedDollars);
+    const dolSign  = unrealizedDollars >= 0 ? '+' : '-';
+    const dolFmt   = dolAmt >= 1e9
+      ? `${dolSign}$${(Math.abs(unrealizedDollars) / 1e9).toFixed(2)}B`
+      : `${dolSign}$${(Math.abs(unrealizedDollars) / 1e6).toFixed(1)}M`;
+    const color    = pct >= 0 ? '#4caf50' : '#ef5350';
+    const accent   = pct >= 0 ? '#0d2414' : '#200d0d';
+    const border   = pct >= 0 ? '#4caf5055' : '#ef535055';
+    const gaugePct = Math.min(100, Math.abs(pct) / 5 * 100);
+    const recoveryNeeded = pct < 0 ? (-pct / (1 + pct / 100)).toFixed(3) : null;
+
+    container.innerHTML += `
+      <div class="pos-card" style="border-color:${border};background:${accent}11">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+          <div>
+            <div style="font-size:1.0rem;font-weight:700;color:#d8d8d8">${p.ticker}</div>
+            <div style="font-size:0.72rem;color:#555;margin-top:2px">${p.name}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:1.2rem;font-weight:700;color:${color}">${pctSign}${pct.toFixed(3)}%</div>
+            <div style="font-size:0.72rem;color:#444">vs avg cost</div>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:#444;margin-bottom:4px">
+            <span>Drawdown from entry</span><span>${pctSign}${pct.toFixed(3)}%</span>
+          </div>
+          <div class="gauge-track"><div class="gauge-fill" style="width:${gaugePct}%;background:${color}"></div></div>
+        </div>
+        <div class="pos-stat"><span style="color:#555">Position Value</span><strong>$${(posValue/1e9).toFixed(2)}B</strong></div>
+        <div class="pos-stat"><span style="color:#555">Shares Held</span><span>${p.shares.toLocaleString()}</span></div>
+        <div class="pos-stat"><span style="color:#555">Current Price</span><span>$${p.price.toFixed(2)}</span></div>
+        <div class="pos-stat"><span style="color:#555">Avg Entry Cost</span><span>$${avgCost.toFixed(2)}</span></div>
+        <div class="pos-stat"><span style="color:#555">Break-Even Price</span><span style="color:#c8a84b">$${avgCost.toFixed(2)}</span></div>
+        <div class="pos-stat"><span style="color:#555">Unrealized P&L</span><strong style="color:${color}">${dolFmt}</strong></div>
+        ${recoveryNeeded
+          ? `<div style="margin-top:10px;padding:7px 10px;background:#200d0d;border-radius:4px;font-size:0.72rem;color:#ef9a9a">Needs +${recoveryNeeded}% to break even</div>`
+          : `<div style="margin-top:10px;padding:7px 10px;background:#0d2414;border-radius:4px;font-size:0.72rem;color:#4caf50">In profit — holding gains</div>`}
+      </div>`;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER — Portfolio Heatmap
+// ═══════════════════════════════════════════════════════════
+function renderHeatmap() {
+  const grid = document.getElementById('heatmapGrid');
+  grid.innerHTML = '';
+  [...allStocks].sort((a, b) => (+b.d30||0) - (+a.d30||0)).forEach(s => {
+    const d30 = +s.d30 || 0;
+    let bg, textCol;
+    if      (d30 >= 4)   { bg = '#0d4020'; textCol = '#6ee89a'; }
+    else if (d30 >= 3)   { bg = '#0d3018'; textCol = '#4caf50'; }
+    else if (d30 >= 2)   { bg = '#112b12'; textCol = '#81c784'; }
+    else if (d30 >= 1)   { bg = '#252206'; textCol = '#c8a84b'; }
+    else if (d30 >= 0.5) { bg = '#2a1a06'; textCol = '#ff9800'; }
+    else                 { bg = '#2a1010'; textCol = '#ef9a9a'; }
+    const border = s.held ? 'border:1.5px solid #c8a84b55;' : 'border:1px solid #1e1e1e;';
+    const dot    = s.held ? `<div class="hm-held-dot"></div>` : '';
+    grid.innerHTML += `
+      <div class="hm-cell" style="background:${bg};${border}"
+        title="${s.name} | 1m: +${d30.toFixed(2)}% | 7d: +${(+s.d7||0).toFixed(2)}% | 1y: +${(+s.d365||0).toFixed(2)}%">
+        <div class="hm-ticker" style="color:${textCol}">${s.ticker}</div>
+        <div class="hm-val"    style="color:${textCol}">+${d30.toFixed(2)}%</div>
+        ${dot}
+      </div>`;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER — Holdings Table
+// ═══════════════════════════════════════════════════════════
+function renderHoldingsTable() {
+  const { holdings, totalValue } = getPortfolio();
+  const sorted = [...holdings].sort((a, b) => b.value - a.value);
+  const tbody  = document.getElementById('holdingsTable');
+  tbody.innerHTML = '';
+  sorted.forEach(h => {
+    const pct      = (h.value / totalValue * 100);
+    const barW     = Math.min(100, pct / (sorted[0].value / totalValue * 100) * 100);
+    const barColor = pct > 50 ? '#c8a84b' : pct > 10 ? '#42a5f5' : '#4caf50';
+    const dc       = v => v >= 0.5 ? '#4caf50' : v >= 0.2 ? '#c8a84b' : '#666';
+    const trend    = [h.d1, h.d7, h.d30, h.d365];
+    const maxT     = Math.max(...trend, 0.01);
+    const trendHtml = trend.map(v => {
+      const h_px = Math.max(3, Math.round(v / maxT * 18));
+      const c    = v === Math.max(...trend) ? '#c8a84b' : v >= 1 ? '#4caf50' : '#2a2a2a';
+      return `<span style="height:${h_px}px;background:${c}"></span>`;
+    }).join('');
+    const typeBadge = ACTIVE_TICKERS.has(h.ticker)
+      ? '<span class="tag tag-gold">TRADE</span>'
+      : '<span class="tag tag-gray">HOLD</span>';
+    const unrlzCell = (h.unrlzPct !== null && h.unrlzPct !== undefined)
+      ? `<span style="color:${h.unrlzPct >= 0 ? '#4caf50' : '#ef5350'}">${h.unrlzPct >= 0 ? '+' : ''}${h.unrlzPct.toFixed(2)}%</span>`
+      : '<span style="color:#333">—</span>';
+
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>${h.name}</strong> <span style="color:#444;font-size:0.72rem">${h.ticker}</span></td>
+        <td>${typeBadge}</td>
+        <td style="color:#555;font-size:0.75rem">${h.shares.toLocaleString()}</td>
+        <td>$${h.price.toFixed(2)}</td>
+        <td><strong>$${(h.value / 1e9).toFixed(1)}B</strong>
+          <div class="mini-bar"><div class="mini-bar-fill" style="width:${barW}%;background:${barColor}"></div></div></td>
+        <td style="color:${barColor}">${pct.toFixed(2)}%</td>
+        <td>${unrlzCell}</td>
+        <td style="color:${dc(h.d1)}">+${h.d1.toFixed(2)}%</td>
+        <td style="color:${dc(h.d7)}">+${h.d7.toFixed(2)}%</td>
+        <td style="color:${dc(h.d30)}"><strong>+${h.d30.toFixed(2)}%</strong></td>
+        <td style="color:${dc(h.d365)}">+${h.d365.toFixed(2)}%</td>
+        <td><div class="trend-bars">${trendHtml}</div></td>
+      </tr>`;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER — Market Scanner
+// ═══════════════════════════════════════════════════════════
+function renderMarketTable() {
+  const tbody = document.getElementById('marketTable');
+  tbody.innerHTML = '';
+  [...allStocks].sort((a, b) => (+b.price||0) - (+a.price||0)).forEach(s => {
+    const price = +s.price || 0, d1 = +s.d1||0, d7 = +s.d7||0, d30 = +s.d30||0, d365 = +s.d365||0;
+    Object.assign(s, { price, d1, d7, d30, d365 }); // normalize in place
+    const ratio  = s.d365 > 0 ? (s.d30 / s.d365) : 0;
+    const signal = ratio > 1.5  ? ['🔥 Recovery', 'tag-green'] :
+                   ratio > 0.8  ? ['📈 Bullish',   'tag-gold']  :
+                   s.d365 > 7   ? ['⭐ Strong',     'tag-blue']  :
+                   ratio < 0.2  ? ['😴 Stagnant',   'tag-gray']  : ['↔ Neutral', 'tag-gray'];
+    const dc = v => v >= 0.5 ? '#4caf50' : v >= 0.2 ? '#c8a84b' : '#555';
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>${s.name}</strong> <span style="color:#333;font-size:0.72rem">${s.ticker}</span></td>
+        <td>$${s.price.toFixed(2)}</td>
+        <td style="color:${dc(s.d1)}">+${s.d1.toFixed(2)}%</td>
+        <td style="color:${dc(s.d7)}">+${s.d7.toFixed(2)}%</td>
+        <td style="color:${dc(s.d30)}"><strong>+${s.d30.toFixed(2)}%</strong></td>
+        <td style="color:${dc(s.d365)}">+${s.d365.toFixed(2)}%</td>
+        <td style="color:${ratio > 1 ? '#4caf50' : '#555'}"><strong>${ratio > 0 ? ratio.toFixed(2) + 'x' : '—'}</strong></td>
+        <td>${s.held ? '<span class="tag tag-gold">HELD</span>' : '<span class="tag tag-gray">—</span>'}</td>
+        <td><span class="tag ${signal[1]}">${signal[0]}</span></td>
+      </tr>`;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER — ROI History Table
+// ═══════════════════════════════════════════════════════════
+function renderROITable() {
+  const tbody = document.getElementById('roiTable');
+  tbody.innerHTML = '';
+  const initialBalance = fund39Start[0];
+  MONTHS_FULL.forEach((m, i) => {
+    const s = fund39Start[i], e = fund39End[i];
+    const gain = e - s, roi = gain / s * 100;
+    const vs = roi - AVG_ROI;
+    const cumReturn  = (e - initialBalance) / initialBalance * 100;
+    const pillClass  = roi >= 2.5 ? 'roi-high' : roi >= 1.5 ? 'roi-mid' : 'roi-low';
+    tbody.innerHTML += `
+      <tr>
+        <td><strong>${m}</strong></td>
+        <td style="color:#555;font-size:0.75rem">$${(s / 1000).toFixed(2)}B</td>
+        <td style="color:#555;font-size:0.75rem">$${(e / 1000).toFixed(2)}B</td>
+        <td class="${gain >= 0 ? 'pos' : 'neg'}">+$${(gain / 1000).toFixed(2)}B</td>
+        <td><span class="roi-pill ${pillClass}">${roi.toFixed(3)}%</span></td>
+        <td class="${vs >= 0 ? 'pos' : 'neg'}" style="font-size:0.75rem">${vs >= 0 ? '+' : ''}${vs.toFixed(3)}%</td>
+        <td style="color:#42a5f5;font-size:0.75rem">+${cumReturn.toFixed(1)}%</td>
+      </tr>`;
+  });
+
+  // Current month IN PROGRESS row
+  const now = new Date();
+  const currMonthLabel = now.toLocaleString('default', { month: 'short', year: 'numeric' });
+  const aprRoi     = mtdGain / APRIL_START * 100;
+  const aprVs      = aprRoi - AVG_ROI;
+  const gainAbsM   = Math.abs(mtdGain) / 1e6;
+  const gainSign   = mtdGain >= 0 ? '+' : '-';
+  const pillClass  = aprRoi >= 2.5 ? 'roi-high' : aprRoi >= 1.5 ? 'roi-mid' : 'roi-low';
+  tbody.innerHTML += `
+    <tr style="opacity:0.8;border-top:1px solid #2a2a2a">
+      <td><strong>${currMonthLabel}</strong> <span class="tag tag-gold" style="font-size:0.6rem;margin-left:4px">IN PROGRESS</span></td>
+      <td style="color:#555;font-size:0.75rem">$${(APRIL_START / 1e9).toFixed(3)}B</td>
+      <td style="color:#333;font-size:0.72rem;font-style:italic">realized only <span style="color:#2a2a2a;font-size:0.6rem">(${mtdTrades.length} sell${mtdTrades.length !== 1 ? 's' : ''} closed)</span></td>
+      <td class="pos">${gainSign}$${gainAbsM.toFixed(1)}M</td>
+      <td><span class="roi-pill ${pillClass}">${aprRoi.toFixed(3)}%</span></td>
+      <td class="${aprVs >= 0 ? 'pos' : 'neg'}" style="font-size:0.75rem">${aprVs >= 0 ? '+' : ''}${aprVs.toFixed(3)}%</td>
+      <td style="color:#555;font-size:0.75rem">${mtdTrades.map(t => t.ticker).join(' · ') || 'none yet'}</td>
+    </tr>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER ALL
+// ═══════════════════════════════════════════════════════════
+function renderAll() {
+  renderKPIs();
+  renderCharts();
+  renderTopPicks();
+  renderWaterfall();
+  renderPositionCards();
+  renderHeatmap();
+  renderHoldingsTable();
+  renderMarketTable();
+  renderROITable();
+  document.getElementById('footerYear').textContent = new Date().getFullYear();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  API LAYER
+// ═══════════════════════════════════════════════════════════
+async function tornFetch(endpoint, apiKey) {
+  const url = `https://api.torn.com/${endpoint}&key=${apiKey}`;
+  const res  = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} from Torn API`);
+  const data = await res.json();
+  if (data.error) {
+    const code = data.error.code;
+    const msg  = data.error.error || 'Unknown error';
+    if (code === 2) throw new Error('Invalid API key. Please re-enter your key.');
+    if (code === 1) throw new Error('API key is empty.');
+    if (code === 13) throw new Error('Full Access key required for sell log. Using Limited key? Prices + portfolio will still update.');
+    throw new Error(`Torn API error ${code}: ${msg}`);
+  }
+  return data;
+}
+
+async function loadLiveData(apiKey) {
+  // Fetch prices + portfolio in parallel; sell log separately (needs Full Access)
+  let stocksData, portfolioData, sellLogData;
+  let sellLogError = null;
+
+  [stocksData, portfolioData] = await Promise.all([
+    tornFetch('torn/?selections=stocks', apiKey),
+    tornFetch('user/?selections=stocks', apiKey),
+  ]);
+
+  try {
+    sellLogData = await tornFetch('user/?selections=log&cat=133&limit=100', apiKey);
+  } catch(e) {
+    sellLogError = e.message;
+    // Prices + portfolio still work — just keep cached MTD
+  }
+
+  // ── Update prices and d1/d7/d30/d365 from stocks API ──
+  // NOTE: Torn API sometimes returns numbers as strings — always parseFloat
+  if (stocksData.stocks) {
+    const byAcronym = {};
+    Object.values(stocksData.stocks).forEach(s => {
+      if (s.acronym) byAcronym[s.acronym] = s;
+    });
+    allStocks.forEach(stock => {
+      const apiS = byAcronym[stock.ticker];
+      if (!apiS) return;
+      const p = parseFloat(apiS.current_price);
+      if (!isNaN(p) && p > 0) stock.price = p;
+      // Update percent changes if the API provides them
+      const d1   = parseFloat(apiS.change_day);
+      const d7   = parseFloat(apiS.change_week);
+      const d30  = parseFloat(apiS.change_month);
+      const d365 = parseFloat(apiS.change_year);
+      if (!isNaN(d1))   stock.d1   = Math.abs(d1);
+      if (!isNaN(d7))   stock.d7   = Math.abs(d7);
+      if (!isNaN(d30))  stock.d30  = Math.abs(d30);
+      if (!isNaN(d365)) stock.d365 = Math.abs(d365);
+    });
+  }
+
+  // ── Update portfolio positions ──
+  if (portfolioData.stocks && stocksData.stocks) {
+    const idToAcronym = {};
+    Object.values(stocksData.stocks).forEach(s => {
+      if (s.stock_id && s.acronym) idToAcronym[s.stock_id] = s.acronym;
+    });
+
+    // Reset all holdings
+    allStocks.forEach(s => { s.held = false; s.shares = 0; s.unrlzPct = null; });
+
+    Object.values(portfolioData.stocks).forEach(pos => {
+      const id     = pos.stock_id;
+      const ticker = idToAcronym[id];
+      if (!ticker) return;
+      const stock  = allStocks.find(s => s.ticker === ticker);
+      if (!stock)  return;
+      const shares = parseInt(pos.total_shares || pos.shares || 0, 10);
+      if (shares === 0) return;
+      stock.held   = true;
+      stock.shares = shares;
+      const avgCost = parseFloat(pos.bought_price) || 0;
+      stock.unrlzPct = avgCost > 0 ? (stock.price - avgCost) / avgCost * 100 : null;
+    });
+  }
+
+  // ── Update MTD from sell log ──
+  if (sellLogData && sellLogData.log) {
+    const now        = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000;
+    const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime() / 1000;
+    const idToAcronym = {}, idToName = {};
+    if (stocksData.stocks) {
+      Object.values(stocksData.stocks).forEach(s => {
+        if (s.stock_id && s.acronym) idToAcronym[s.stock_id] = s.acronym;
+        if (s.stock_id && s.name)    idToName[s.stock_id]    = s.name;
+      });
+    }
+
+    mtdGain   = 0;
+    mtdTrades = [];
+    Object.values(sellLogData.log).forEach(entry => {
+      const ts     = parseInt(entry.timestamp, 10) || 0;
+      const profit = parseFloat(entry.data && entry.data.profit) || 0;
+      if (ts >= monthStart && ts < monthEnd && profit !== 0) {
+        mtdGain += profit;
+        const sid    = entry.data.stock_id;
+        const ticker = entry.data.stock_acronym || idToAcronym[sid] || '???';
+        const name   = idToName[sid] || ticker;
+        const d      = new Date(ts * 1000);
+        mtdTrades.push({
+          ts,
+          date:   d.toLocaleString('default', { month: 'short', day: 'numeric' }),
+          ticker, name,
+          shares: parseInt(entry.data.shares, 10) || 0,
+          price:  parseFloat(entry.data.price)    || 0,
+          profit,
+        });
+      }
+    });
+    mtdTrades.sort((a, b) => a.ts - b.ts);
+  }
+
+  return { sellLogError };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LOADING STATE UI
+// ═══════════════════════════════════════════════════════════
+function setLoading(on) {
+  const bar = document.getElementById('loading-bar');
+  const btn = document.getElementById('refreshBtn');
+  if (on) {
+    bar.className = 'loading';
+    btn.classList.add('spin');
+    btn.disabled = true;
+  } else {
+    bar.className = 'done';
+    btn.classList.remove('spin');
+    btn.disabled = false;
+    setTimeout(() => { bar.className = ''; }, 400);
+  }
+}
+
+function setBadgeLive(ts) {
+  const badge = document.getElementById('liveBadge');
+  badge.textContent = '● LIVE';
+  badge.className   = 'badge live';
+  const fmt = ts.toLocaleTimeString('default', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('lastUpdated').textContent =
+    `Live data · refreshed ${fmt} · Manager: Darkfire [#1631210]`;
+}
+
+function setBadgeError() {
+  const badge = document.getElementById('liveBadge');
+  badge.textContent = '⚠ FETCH FAILED';
+  badge.className   = 'badge err';
+}
+
+function showFetchError(msg) {
+  setBadgeError();
+  const el = document.getElementById('fetch-error');
+  document.getElementById('fetch-error-msg').textContent = msg;
+  el.classList.add('visible');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  API KEY MODAL
+// ═══════════════════════════════════════════════════════════
+function showApiModal() {
+  document.getElementById('api-modal').style.display = 'flex';
+  document.getElementById('api-modal').style.flexDirection = 'column';
+  document.getElementById('api-modal').style.alignItems = 'center';
+  document.getElementById('api-modal').style.justifyContent = 'center';
+  setTimeout(() => document.getElementById('api-key-input').focus(), 100);
+}
+function dismissModal() {
+  document.getElementById('api-modal').style.display = 'none';
+}
+async function submitApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  const errEl = document.getElementById('api-modal-err');
+  if (!key) { errEl.textContent = 'Please paste your API key.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  dismissModal();
+  localStorage.setItem('darkfire_api_key', key);
+  await doFetch(key);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FETCH ORCHESTRATION
+// ═══════════════════════════════════════════════════════════
+async function doFetch(apiKey) {
+  setLoading(true);
+  document.getElementById('fetch-error').classList.remove('visible');
+  try {
+    const result = await loadLiveData(apiKey);
+    renderAll();
+    setBadgeLive(new Date());
+    setLoading(false);
+    if (result.sellLogError) {
+      // Partial success: prices + portfolio live, MTD still cached
+      const el = document.getElementById('fetch-error');
+      document.getElementById('fetch-error-msg').textContent =
+        `MTD data using cached values (${result.sellLogError}). Prices + portfolio are live.`;
+      el.classList.add('visible');
+    }
+  } catch(e) {
+    setLoading(false);
+    // Check for CORS / network error
+    const isCors = e.name === 'TypeError' && (e.message.includes('fetch') || e.message.includes('network'));
+    if (isCors) {
+      showFetchError('CORS blocked: Torn API is rejecting requests from this domain. A Cloudflare Workers proxy is needed. Contact your dashboard admin.');
+    } else {
+      showFetchError(e.message);
+    }
+  }
+}
+
+async function doRefresh() {
+  const key = localStorage.getItem('darkfire_api_key');
+  if (!key) { showApiModal(); return; }
+  await doFetch(key);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HIDE / RESTORE SYSTEM
+// ═══════════════════════════════════════════════════════════
+const SECTION_LABELS = {
+  kpis: 'KPI Summary Cards', 'charts-main': 'Fund Growth & Allocation',
+  'charts-roi': 'Monthly ROI Charts', thesis: 'Investment Thesis',
+  trades: 'Trade Waterfall', positions: 'Active Position Monitor',
+  heatmap: 'Portfolio Heatmap', holdings: 'Holdings Table',
+  market: 'Market Scanner', history: 'Performance History',
+};
+const HIDDEN_KEY  = 'darkfire_hidden_sections';
+const ORDER_KEY   = 'darkfire_section_order';
+const CUST_KEY    = 'darkfire_customize_mode';
+
+function getHidden() { try { return JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]'); } catch(e) { return []; } }
+function saveHidden(a) { try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(a)); } catch(e) {} }
+
+function hideSection(id) {
+  const el = document.querySelector(`[data-id="${id}"]`);
+  if (el) el.style.display = 'none';
+  const h = getHidden(); if (!h.includes(id)) h.push(id); saveHidden(h);
+  renderRestorePanel();
+}
+function restoreSection(id) {
+  const el = document.querySelector(`[data-id="${id}"]`);
+  if (el) el.style.display = '';
+  saveHidden(getHidden().filter(x => x !== id));
+  renderRestorePanel();
+}
+function renderRestorePanel() {
+  const hidden = getHidden();
+  const panel  = document.getElementById('restore-panel');
+  const list   = document.getElementById('restore-list');
+  if (!panel) return;
+  if (hidden.length === 0) { panel.classList.remove('visible'); list.innerHTML = '<div class="restore-empty">No hidden sections</div>'; return; }
+  panel.classList.add('visible');
+  list.innerHTML = hidden.map(id => `
+    <div class="restore-item">
+      <span>${SECTION_LABELS[id] || id}</span>
+      <button onclick="restoreSection('${id}')">Show ↑</button>
+    </div>`).join('');
+}
+function toggleCustomize() {
+  const active = document.body.classList.toggle('customize-mode');
+  const btn = document.getElementById('customizeBtn');
+  if (btn) { btn.classList.toggle('active', active); btn.textContent = active ? '✕ Done' : '⚙ Customize'; }
+  try { localStorage.setItem(CUST_KEY, active ? '1' : '0'); } catch(e) {}
+  if (active) renderRestorePanel();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DRAG & DROP
+// ═══════════════════════════════════════════════════════════
+function initDragDrop() {
+  const container = document.getElementById('sortable-container');
+  if (!container || typeof Sortable === 'undefined') return;
+  try {
+    const saved = JSON.parse(localStorage.getItem(ORDER_KEY) || '[]');
+    if (saved.length) saved.forEach(id => {
+      const el = container.querySelector(`[data-id="${id}"]`);
+      if (el) container.appendChild(el);
+    });
+  } catch(e) {}
+  Sortable.create(container, {
+    animation: 180, easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+    ghostClass: 'sortable-ghost', chosenClass: 'sortable-chosen', dragClass: 'sortable-drag',
+    handle: '.drag-handle',
+    onEnd() {
+      const order = [...container.children].map(el => el.dataset.id).filter(Boolean);
+      try { localStorage.setItem(ORDER_KEY, JSON.stringify(order)); } catch(e) {}
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+(async function init() {
+  // 1. Render immediately with cached defaults (fast first paint)
+  renderAll();
+  initDragDrop();
+
+  // 2. Apply saved hidden sections + customize mode
+  getHidden().forEach(id => {
+    const el = document.querySelector(`[data-id="${id}"]`);
+    if (el) el.style.display = 'none';
+  });
+  renderRestorePanel();
+  try {
+    if (localStorage.getItem(CUST_KEY) === '1') {
+      document.body.classList.add('customize-mode');
+      const btn = document.getElementById('customizeBtn');
+      if (btn) { btn.classList.add('active'); btn.textContent = '✕ Done'; }
+    }
+  } catch(e) {}
+
+  // 3. Fetch live data if we have a key
+  const key = localStorage.getItem('darkfire_api_key');
+  if (key) {
+    await doFetch(key);
+  } else {
+    // No key saved — show modal to set up live data
+    showApiModal();
+  }
+})();
+</script>
+</body>
+</html>
