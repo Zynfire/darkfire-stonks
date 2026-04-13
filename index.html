@@ -1161,17 +1161,41 @@ async function loadLiveData(apiKey) {
     // Reset all holdings
     allStocks.forEach(s => { s.held = false; s.shares = 0; s.unrlzPct = null; });
 
+    // Accumulate lots per stock — Torn API may return one entry per lot (transaction-level)
+    // OR one entry per stock with a nested transactions object (position-level).
+    // We handle both: accumulate share counts and weighted cost across all entries.
+    const acc = {}; // ticker → { totalShares, weightedCostSum }
+
     Object.values(portfolioData.stocks).forEach(pos => {
       const id     = pos.stock_id;
       const ticker = idToAcronym[id];
       if (!ticker) return;
-      const stock  = allStocks.find(s => s.ticker === ticker);
-      if (!stock)  return;
-      const shares = parseInt(pos.total_shares || pos.shares || 0, 10);
-      if (shares === 0) return;
+      if (!acc[ticker]) acc[ticker] = { totalShares: 0, weightedCostSum: 0 };
+
+      // Case A: position-level entry with a transactions sub-object
+      if (pos.transactions && typeof pos.transactions === 'object') {
+        Object.values(pos.transactions).forEach(txn => {
+          const s = parseInt(txn.shares, 10) || 0;
+          const c = parseFloat(txn.bought_price) || 0;
+          acc[ticker].totalShares    += s;
+          acc[ticker].weightedCostSum += s * c;
+        });
+      } else {
+        // Case B: transaction-level entry — bought_price is at top level
+        const s = parseInt(pos.total_shares || pos.shares || 0, 10);
+        const c = parseFloat(pos.bought_price) || 0;
+        acc[ticker].totalShares    += s;
+        acc[ticker].weightedCostSum += s * c;
+      }
+    });
+
+    // Apply accumulated totals to allStocks
+    Object.entries(acc).forEach(([ticker, data]) => {
+      const stock = allStocks.find(s => s.ticker === ticker);
+      if (!stock || data.totalShares === 0) return;
       stock.held   = true;
-      stock.shares = shares;
-      const avgCost = parseFloat(pos.bought_price) || 0;
+      stock.shares = data.totalShares;
+      const avgCost = data.totalShares > 0 ? data.weightedCostSum / data.totalShares : 0;
       stock.unrlzPct = avgCost > 0 ? (stock.price - avgCost) / avgCost * 100 : null;
     });
   }
