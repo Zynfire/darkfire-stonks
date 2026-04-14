@@ -148,12 +148,12 @@ tbody tr:last-child td { border-bottom: none; }
 .roi-low  { background: #200d0d; color: #ef9a9a; }
 
 /* ── Drag & Drop ── */
-.drag-block { position: relative; margin-bottom: 20px; }
-.drag-block > .section,
-.drag-block > .two-col,
-.drag-block > .three-col,
-.drag-block > .kpi-grid { margin-bottom: 0; }
-.section[data-id] { margin-bottom: 20px; }
+#sortable-container { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.drag-block { position: relative; }
+.db-full  { flex: 0 0 100%; }
+.db-half  { flex: 0 0 calc(50% - 8px); min-width: 320px; }
+@media(max-width:900px) { .db-half { flex: 0 0 100%; } }
+.drag-block > .section { margin-bottom: 0; height: 100%; }
 .drag-handle {
   position: absolute; top: 12px; right: 14px;
   color: #2a2a2a; font-size: 1.1rem; line-height: 1;
@@ -161,8 +161,7 @@ tbody tr:last-child td { border-bottom: none; }
   opacity: 0; transition: opacity 0.15s, color 0.15s;
   z-index: 10; letter-spacing: 2px;
 }
-.drag-block:hover .drag-handle,
-[data-id]:hover > .section-title .drag-handle { opacity: 1; }
+.drag-block:hover > .drag-handle { opacity: 1; }
 .drag-handle:hover { color: #c8a84b; }
 .drag-handle:active { cursor: grabbing; }
 .sortable-ghost  { opacity: 0.15 !important; background: #1a1a0a !important; border: 1px dashed #c8a84b55 !important; border-radius: 8px; }
@@ -179,7 +178,6 @@ tbody tr:last-child td { border-bottom: none; }
 .hide-btn:hover { background: #2d1010; border-color: #ef5350; }
 body.customize-mode .hide-btn { display: block; }
 body.customize-mode .drag-block { outline: 1px dashed #2a2a2a; border-radius: 8px; }
-body.customize-mode [data-id].section { outline: 1px dashed #2a2a2a; }
 #restore-panel {
   position: fixed; bottom: 24px; right: 24px; z-index: 1000;
   background: #111; border: 1px solid #2a2a2a; border-radius: 8px;
@@ -297,7 +295,7 @@ body.customize-mode [data-id].section { outline: 1px dashed #2a2a2a; }
 <div id="sortable-container">
 
 <!-- ── KPIs ── -->
-<div class="drag-block" data-id="kpis">
+<div class="drag-block db-full" data-id="kpis">
 <span class="drag-handle" title="Drag to reorder">⠿</span>
 <button class="hide-btn" onclick="hideSection('kpis')">✕ Hide</button>
 <div class="kpi-grid">
@@ -334,90 +332,96 @@ body.customize-mode [data-id].section { outline: 1px dashed #2a2a2a; }
 </div>
 </div><!-- end kpis -->
 
-<!-- ── FUND GROWTH + PIE ── -->
-<div class="drag-block" data-id="charts-main">
+<!-- ── FUND GROWTH ── -->
+<div class="drag-block db-half" data-id="growth">
 <span class="drag-handle" title="Drag to reorder">⠿</span>
-<button class="hide-btn" onclick="hideSection('charts-main')">✕ Hide</button>
-<div class="three-col" style="margin-bottom:0">
-  <div class="section">
-    <div class="section-title"><span class="dot"></span>39th Street Fund Growth ($B)</div>
-    <div class="chart-h300"><canvas id="growthChart"></canvas></div>
-  </div>
-  <div class="section">
-    <div class="section-title"><span class="dot"></span>Portfolio Allocation (Live)</div>
-    <div class="chart-h300"><canvas id="pieChart"></canvas></div>
-  </div>
+<button class="hide-btn" onclick="hideSection('growth')">✕ Hide</button>
+<div class="section">
+  <div class="section-title"><span class="dot"></span>39th Street Fund Growth ($B)</div>
+  <div class="chart-h300"><canvas id="growthChart"></canvas></div>
 </div>
-</div><!-- end charts-main -->
+</div><!-- end growth -->
 
-<!-- ── ROI CHART + DISTRIBUTION ── -->
-<div class="drag-block" data-id="charts-roi">
+<!-- ── PORTFOLIO PIE ── -->
+<div class="drag-block db-half" data-id="pie">
 <span class="drag-handle" title="Drag to reorder">⠿</span>
-<button class="hide-btn" onclick="hideSection('charts-roi')">✕ Hide</button>
-<div class="two-col" style="margin-bottom:0">
-  <div class="section">
-    <div class="section-title"><span class="dot"></span>Monthly Return % — 39th Street Fund</div>
-    <div class="chart-h240"><canvas id="roiChart"></canvas></div>
-  </div>
-  <div class="section">
-    <div class="section-title"><span class="dot"></span>Return Distribution</div>
-    <div class="chart-h240"><canvas id="distChart"></canvas></div>
-  </div>
+<button class="hide-btn" onclick="hideSection('pie')">✕ Hide</button>
+<div class="section">
+  <div class="section-title"><span class="dot"></span>Portfolio Allocation (Live)</div>
+  <div class="chart-h300"><canvas id="pieChart"></canvas></div>
 </div>
-</div><!-- end charts-roi -->
+</div><!-- end pie -->
+
+<!-- ── ROI CHART ── -->
+<div class="drag-block db-half" data-id="roi-chart">
+<span class="drag-handle" title="Drag to reorder">⠿</span>
+<button class="hide-btn" onclick="hideSection('roi-chart')">✕ Hide</button>
+<div class="section">
+  <div class="section-title"><span class="dot"></span>Monthly Return % — 39th Street Fund</div>
+  <div class="chart-h240"><canvas id="roiChart"></canvas></div>
+</div>
+</div><!-- end roi-chart -->
+
+<!-- ── DISTRIBUTION ── -->
+<div class="drag-block db-half" data-id="dist-chart">
+<span class="drag-handle" title="Drag to reorder">⠿</span>
+<button class="hide-btn" onclick="hideSection('dist-chart')">✕ Hide</button>
+<div class="section">
+  <div class="section-title"><span class="dot"></span>Return Distribution</div>
+  <div class="chart-h240"><canvas id="distChart"></canvas></div>
+</div>
+</div><!-- end dist-chart -->
 
 <!-- ── INVESTMENT THESIS ── -->
-<div class="section" data-id="thesis" style="margin-bottom:20px;position:relative">
-  <button class="hide-btn" onclick="hideSection('thesis')" style="top:10px;right:40px">✕ Hide</button>
-  <div class="section-title"><span class="dot"></span>Active Investment Thesis<span class="drag-handle">⠿</span></div>
+<div class="drag-block db-full" data-id="thesis">
+<span class="drag-handle" title="Drag to reorder">⠿</span>
+<button class="hide-btn" onclick="hideSection('thesis')">✕ Hide</button>
+<div class="section">
+  <div class="section-title"><span class="dot"></span>Active Investment Thesis &amp; Floor Picks</div>
   <div class="two-col" style="margin-bottom:0">
-    <div>
-      <div class="thesis">
-        <div class="thesis-title">📍 Core Position: Lucky Shot Casino (LSC) — Buy-the-Dip</div>
-        <p>LSC represents a dominant share of AUM. The investment thesis rests on price recovery from yearly lows. Yearly appreciation stands at just <strong>+2.12%</strong>, but the past month alone delivered <strong>+4.07%</strong> — meaning the entire year's gains arrived in the last 30 days, confirming the stock was below its yearly baseline for most of the prior year and is now in a recovery breakout. High-conviction position actively driving portfolio returns.</p>
-      </div>
-      <div class="thesis green">
-        <div class="thesis-title">📍 Secondary Position: Yazoo (YAZ) — Buy-the-Dip</div>
-        <p>YAZ holds a significant share of AUM with 1.04B shares. The yearly return is only <strong>+2.10%</strong>, but monthly is <strong>+4.70%</strong> and weekly is <strong>+2.80%</strong> — the strongest weekly gain of any tracked stock. Like LSC, the entire year's appreciation is occurring right now, signaling a momentum shift after an extended period at the yearly floor.</p>
-      </div>
-    </div>
+    <div id="thesisCols"></div>
     <div>
       <div class="thesis blue">
-        <div class="thesis-title">🎯 Top 5 Near-Term Buy Picks</div>
-        <p style="margin-bottom:10px">Stocks most behind their own historical monthly pace — mean-reversion candidates for a quick flip. Scored by <strong>monthly lag</strong> (expected monthly rate minus actual d30), with a bonus when weekly momentum is accelerating. Active positions excluded.</p>
+        <div class="thesis-title">🎯 Top 5 Floor Buy Picks</div>
+        <p style="margin-bottom:10px">Stocks nearest their monthly AND yearly price floor — lowest combined d30+d365 score. In Torn, all stocks eventually recover from lows. <strong>Lowest score = maximum upside room.</strong> Active positions excluded.</p>
         <div id="topPicksList"></div>
       </div>
     </div>
   </div>
 </div>
+</div><!-- end thesis -->
 
-<!-- ── APRIL TRADE WATERFALL ── -->
-<div class="drag-block" data-id="trades">
+<!-- ── TRADE WATERFALL ── -->
+<div class="drag-block db-half" data-id="waterfall">
 <span class="drag-handle" title="Drag to reorder">⠿</span>
-<button class="hide-btn" onclick="hideSection('trades')">✕ Hide</button>
-<div class="two-col" style="margin-bottom:0">
-  <div class="section">
-    <div class="section-title"><span class="dot"></span><span id="waterfallTitle">MTD Trade Waterfall</span></div>
-    <div class="chart-h240"><canvas id="waterfallChart"></canvas></div>
+<button class="hide-btn" onclick="hideSection('waterfall')">✕ Hide</button>
+<div class="section">
+  <div class="section-title"><span class="dot"></span><span id="waterfallTitle">MTD Trade Waterfall</span></div>
+  <div class="chart-h240"><canvas id="waterfallChart"></canvas></div>
+</div>
+</div><!-- end waterfall -->
+
+<!-- ── TRADE LOG ── -->
+<div class="drag-block db-half" data-id="trade-log">
+<span class="drag-handle" title="Drag to reorder">⠿</span>
+<button class="hide-btn" onclick="hideSection('trade-log')">✕ Hide</button>
+<div class="section">
+  <div class="section-title"><span class="dot"></span><span id="tradeLogTitle">Closed Trades — This Month</span></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Stock</th><th>Shares Sold</th><th>Avg Price</th><th>Realized Profit</th><th>Running Total</th></tr></thead>
+      <tbody id="tradeLogTable"></tbody>
+    </table>
   </div>
-  <div class="section">
-    <div class="section-title"><span class="dot"></span><span id="tradeLogTitle">Closed Trades — This Month</span></div>
-    <div class="tbl-wrap">
-      <table>
-        <thead><tr><th>Date</th><th>Stock</th><th>Shares Sold</th><th>Avg Price</th><th>Realized Profit</th><th>Running Total</th></tr></thead>
-        <tbody id="tradeLogTable"></tbody>
-      </table>
-    </div>
-    <div style="margin-top:14px;padding-top:12px;border-top:1px solid #1a1a1a;display:flex;justify-content:space-between;align-items:center">
-      <span style="font-size:0.72rem;color:#555">MTD Total</span>
-      <span style="font-size:1.1rem;font-weight:700;color:#4caf50" id="tradeMtdTotal">—</span>
-    </div>
+  <div style="margin-top:14px;padding-top:12px;border-top:1px solid #1a1a1a;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-size:0.72rem;color:#555">MTD Total</span>
+    <span style="font-size:1.1rem;font-weight:700;color:#4caf50" id="tradeMtdTotal">—</span>
   </div>
 </div>
-</div><!-- end trades -->
+</div><!-- end trade-log -->
 
 <!-- ── ACTIVE POSITION MONITOR ── -->
-<div class="drag-block" data-id="positions">
+<div class="drag-block db-full" data-id="positions">
 <span class="drag-handle" title="Drag to reorder">⠿</span>
 <button class="hide-btn" onclick="hideSection('positions')">✕ Hide</button>
 <div class="section" style="margin-bottom:0">
@@ -427,7 +431,7 @@ body.customize-mode [data-id].section { outline: 1px dashed #2a2a2a; }
 </div><!-- end positions -->
 
 <!-- ── PORTFOLIO HEATMAP ── -->
-<div class="drag-block" data-id="heatmap">
+<div class="drag-block db-full" data-id="heatmap">
 <span class="drag-handle" title="Drag to reorder">⠿</span>
 <button class="hide-btn" onclick="hideSection('heatmap')">✕ Hide</button>
 <div class="section" style="margin-bottom:0">
@@ -447,9 +451,11 @@ body.customize-mode [data-id].section { outline: 1px dashed #2a2a2a; }
 </div><!-- end heatmap -->
 
 <!-- ── HOLDINGS TABLE ── -->
-<div class="section" data-id="holdings" style="margin-bottom:20px;position:relative">
-  <button class="hide-btn" onclick="hideSection('holdings')" style="top:10px;right:40px">✕ Hide</button>
-  <div class="section-title"><span class="dot"></span>Current Holdings — Price Performance<span class="drag-handle">⠿</span></div>
+<div class="drag-block db-full" data-id="holdings">
+<span class="drag-handle" title="Drag to reorder">⠿</span>
+<button class="hide-btn" onclick="hideSection('holdings')">✕ Hide</button>
+<div class="section">
+  <div class="section-title"><span class="dot"></span>Current Holdings — Price Performance</div>
   <div class="tbl-wrap">
     <table>
       <thead><tr><th>Stock</th><th>Type</th><th>Shares</th><th>Price</th><th>Portfolio Value</th><th>Allocation</th><th>Since Buy</th><th>24h Δ</th><th>7d Δ</th><th>1m Δ</th><th>1y Δ</th><th>Trend</th></tr></thead>
@@ -457,23 +463,29 @@ body.customize-mode [data-id].section { outline: 1px dashed #2a2a2a; }
     </table>
   </div>
 </div>
+</div><!-- end holdings -->
 
 <!-- ── MARKET SCANNER ── -->
-<div class="section" data-id="market" style="margin-bottom:20px;position:relative">
-  <button class="hide-btn" onclick="hideSection('market')" style="top:10px;right:40px">✕ Hide</button>
-  <div class="section-title"><span class="dot"></span>Full Market Scanner — All 35 Stocks<span class="drag-handle">⠿</span></div>
+<div class="drag-block db-full" data-id="market">
+<span class="drag-handle" title="Drag to reorder">⠿</span>
+<button class="hide-btn" onclick="hideSection('market')">✕ Hide</button>
+<div class="section">
+  <div class="section-title"><span class="dot"></span>Full Market Scanner — All 35 Stocks</div>
   <div class="tbl-wrap">
     <table>
-      <thead><tr><th>Stock</th><th>Price</th><th>24h Δ</th><th>7d Δ</th><th>1m Δ</th><th>1y Δ</th><th>1m/1y Ratio</th><th>Held</th><th>Signal</th></tr></thead>
+      <thead><tr><th>Stock</th><th>Price</th><th>24h Δ</th><th>7d Δ</th><th>1m Δ</th><th>1y Δ</th><th>Floor Score</th><th>Held</th><th>Signal</th></tr></thead>
       <tbody id="marketTable"></tbody>
     </table>
   </div>
 </div>
+</div><!-- end market -->
 
 <!-- ── ROI HISTORY ── -->
-<div class="section" data-id="history" style="margin-bottom:20px;position:relative">
-  <button class="hide-btn" onclick="hideSection('history')" style="top:10px;right:40px">✕ Hide</button>
-  <div class="section-title"><span class="dot"></span>Monthly Performance History — 39th Street Fund<span class="drag-handle">⠿</span></div>
+<div class="drag-block db-full" data-id="history">
+<span class="drag-handle" title="Drag to reorder">⠿</span>
+<button class="hide-btn" onclick="hideSection('history')">✕ Hide</button>
+<div class="section">
+  <div class="section-title"><span class="dot"></span>Monthly Performance History — 39th Street Fund</div>
   <div class="tbl-wrap">
     <table>
       <thead><tr><th>Period</th><th>Start Balance</th><th>End Balance</th><th>Monthly Gain</th><th>Return %</th><th>vs Benchmark (1.89%)</th><th>Cumulative Return</th></tr></thead>
@@ -481,6 +493,7 @@ body.customize-mode [data-id].section { outline: 1px dashed #2a2a2a; }
     </table>
   </div>
 </div>
+</div><!-- end history -->
 
 </div><!-- end #sortable-container -->
 
@@ -580,6 +593,20 @@ let mtdTrades = [
 let mtdMonthLabel = 'April 2026';
 
 // ═══════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════
+
+// Smart money formatter: auto-selects B / M / K
+function fmtMoney(dollars, sign = true) {
+  const abs = Math.abs(dollars);
+  const s   = sign ? (dollars >= 0 ? '+' : '-') : (dollars < 0 ? '-' : '');
+  if (abs >= 1e12) return `${s}$${(abs / 1e12).toFixed(2)}T`;
+  if (abs >= 1e9)  return `${s}$${(abs / 1e9).toFixed(2)}B`;
+  if (abs >= 1e6)  return `${s}$${(abs / 1e6).toFixed(1)}M`;
+  return `${s}$${abs.toLocaleString()}`;
+}
+
+// ═══════════════════════════════════════════════════════════
 //  CHART REGISTRY — destroy before recreate on re-render
 // ═══════════════════════════════════════════════════════════
 const charts = {};
@@ -632,11 +659,8 @@ function renderKPIs() {
 
   const gain = mtdGain;
   const roi  = gain / APRIL_START * 100;
-  const absM = Math.abs(gain) / 1e6;
-  const sign = gain >= 0 ? '+' : '-';
 
-  document.getElementById('mtd-val').textContent =
-    `${sign}$${absM.toFixed(1)}M`;
+  document.getElementById('mtd-val').textContent = fmtMoney(gain);
   document.getElementById('mtd-roi').textContent =
     `${gain >= 0 ? '+' : ''}${roi.toFixed(3)}%`;
 
@@ -732,60 +756,106 @@ function renderCharts() {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  RENDER — Top 5 Near-Term Buy Picks
+//  RENDER — Investment Thesis (dynamic)
+// ═══════════════════════════════════════════════════════════
+function renderThesis() {
+  const el = document.getElementById('thesisCols');
+  if (!el) return;
+  const lsc = allStocks.find(s => s.ticker === 'LSC');
+  const yaz = allStocks.find(s => s.ticker === 'YAZ');
+
+  const posCard = (s, label, colorClass) => {
+    if (!s) return '';
+    const val     = s.shares * s.price;
+    const pct     = s.unrlzPct !== null ? s.unrlzPct : 0;
+    const pctSign = pct >= 0 ? '+' : '';
+    const pctCol  = pct >= 0 ? '#4caf50' : '#ef5350';
+    const avgCost = s.unrlzPct !== null ? s.price / (1 + s.unrlzPct / 100) : s.price;
+    return `
+      <div class="thesis ${colorClass}" style="margin-bottom:12px">
+        <div class="thesis-title">📍 ${label}: ${s.name} (${s.ticker}) — Buy-the-Dip</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-top:8px;font-size:0.75rem">
+          <span style="color:#555">Shares Held</span>
+          <span style="color:#d8d8d8;font-weight:600">${(s.shares / 1e6).toFixed(0)}M (${(s.shares / 1e9).toFixed(3)}B)</span>
+          <span style="color:#555">Position Value</span>
+          <span style="color:#d8d8d8;font-weight:600">${fmtMoney(val, false)}</span>
+          <span style="color:#555">Current Price</span>
+          <span style="color:#d8d8d8">$${s.price.toFixed(2)}</span>
+          <span style="color:#555">Avg Entry Cost</span>
+          <span style="color:#d8d8d8">$${avgCost.toFixed(2)}</span>
+          <span style="color:#555">Unrealized P&amp;L</span>
+          <span style="color:${pctCol};font-weight:700">${pctSign}${pct.toFixed(3)}% &nbsp;(${fmtMoney(s.shares * (s.price - avgCost))})</span>
+          <span style="color:#555">1-Month Δ</span>
+          <span style="color:${s.d30 >= 1 ? '#4caf50' : '#c8a84b'}">+${(+s.d30||0).toFixed(2)}%</span>
+          <span style="color:#555">1-Year Δ</span>
+          <span style="color:#888">+${(+s.d365||0).toFixed(2)}%</span>
+        </div>
+        <p style="margin-top:8px;font-size:0.72rem;color:#666;line-height:1.5">
+          ${s.d30 > s.d365 / 12
+            ? `Monthly momentum (${(+s.d30).toFixed(2)}%) is outpacing the yearly average pace — recovery trade actively running.`
+            : `Monthly pace (${(+s.d30).toFixed(2)}%) is below the yearly baseline — still in accumulation zone.`}
+        </p>
+      </div>`;
+  };
+
+  el.innerHTML = posCard(lsc, 'Core Position', '') + posCard(yaz, 'Secondary Position', 'green');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER — Top 5 Floor Buy Picks
 // ═══════════════════════════════════════════════════════════
 function renderTopPicks() {
+  // Floor-hunting: lowest combined d30 + d365 = most at price floor = most upside
   const topPicks = [...allStocks]
-    .filter(s => !ACTIVE_TICKERS.has(s.ticker) && s.d365 > 0)
+    .filter(s => !ACTIVE_TICKERS.has(s.ticker))
     .map(s => {
-      const expectedMonthly  = s.d365 / 12;
-      const lag              = expectedMonthly - s.d30;
-      const weeklyDailyRate  = s.d7 / 7;
-      const monthlyDailyRate = s.d30 / 30;
-      const weeklyAccel      = weeklyDailyRate > monthlyDailyRate * 1.5;
-      const score            = lag * 2 + (weeklyAccel ? 0.4 : 0);
-      return { ...s, lag, expectedMonthly, weeklyAccel, score };
+      const d30  = +s.d30  || 0;
+      const d365 = +s.d365 || 0;
+      const score = d30 + d365 * 0.5; // lower = deeper floor
+      const atMonthlyFloor = d30 < 0.5;
+      const atYearlyFloor  = d365 < 2.0;
+      return { ...s, d30, d365, score, atMonthlyFloor, atYearlyFloor };
     })
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => a.score - b.score)
     .slice(0, 5);
 
   const rankColors = ['#c8a84b','#42a5f5','#4caf50','#ab47bc','#ef9a9a'];
-  const rankLabels = ['#1','#2','#3','#4','#5'];
-  const pickTheses = [
-    s => s.weeklyAccel ? `Weekly pace (${s.d7.toFixed(2)}% / 7d) is accelerating vs flat month — momentum building` : `Only +${s.d30.toFixed(2)}% this month vs +${s.d365.toFixed(2)}% annual — most overdue for catch-up`,
-    s => `Lagging ${(s.expectedMonthly - s.d30).toFixed(3)}% below expected monthly pace${s.weeklyAccel ? ' · weekly waking up' : ''}`,
-    s => `d365 +${s.d365.toFixed(2)}% yearly but d30 only +${s.d30.toFixed(2)}% — extended dormancy`,
-    s => `Solid annual performer (+${s.d365.toFixed(2)}%) sitting out this month — catch-up candidate`,
-    s => `Monthly underperformance vs yearly trend; watch d7 for early confirmation`,
-  ];
-
   const el = document.getElementById('topPicksList');
   el.innerHTML = '';
   topPicks.forEach((s, i) => {
-    const lagColor   = s.lag > 0.2 ? '#4caf50' : s.lag > 0 ? '#c8a84b' : '#ef5350';
-    const accelTag   = s.weeklyAccel ? `<span class="tag tag-green" style="font-size:0.6rem;margin-left:4px">↑ WAKING UP</span>` : '';
-    const heldTag    = s.held        ? `<span class="tag tag-gold"  style="font-size:0.6rem;margin-left:4px">HELD</span>` : '';
-    const thesis     = pickTheses[Math.min(i, pickTheses.length - 1)](s);
+    const floorTag  = s.atMonthlyFloor && s.atYearlyFloor
+      ? `<span class="tag tag-green" style="font-size:0.6rem;margin-left:4px">⬇ DOUBLE FLOOR</span>`
+      : s.atMonthlyFloor
+        ? `<span class="tag tag-gold" style="font-size:0.6rem;margin-left:4px">⬇ MONTHLY LOW</span>`
+        : s.atYearlyFloor
+          ? `<span class="tag tag-blue" style="font-size:0.6rem;margin-left:4px">⬇ YEARLY LOW</span>`
+          : '';
+    const heldTag   = s.held ? `<span class="tag tag-gray" style="font-size:0.6rem;margin-left:4px">HELD</span>` : '';
+    const reason = s.atMonthlyFloor && s.atYearlyFloor
+      ? `Near both monthly and yearly floor — maximum recovery room. Floor score: ${s.score.toFixed(2)}`
+      : s.atMonthlyFloor
+        ? `At monthly floor (only +${s.d30.toFixed(2)}% this month) — primed for recovery.`
+        : `At yearly floor (+${s.d365.toFixed(2)}% annual) — long-term accumulation zone.`;
+
     el.innerHTML += `
       <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #1a1a1a${i===4?';border-bottom:none':''}">
         <div style="min-width:28px;height:28px;border-radius:50%;background:${rankColors[i]}22;border:1px solid ${rankColors[i]}44;
           display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:700;color:${rankColors[i]};flex-shrink:0">
-          ${rankLabels[i]}
+          #${i+1}
         </div>
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:3px">
             <strong style="color:#d8d8d8;font-size:0.84rem">${s.ticker}</strong>
             <span style="color:#444;font-size:0.72rem">${s.name}</span>
-            ${accelTag}${heldTag}
+            ${floorTag}${heldTag}
           </div>
           <div style="display:flex;gap:10px;font-size:0.72rem;color:#555;margin-bottom:4px">
-            <span>1m: <strong class="pos">+${s.d30.toFixed(2)}%</strong></span>
+            <span>1m: <strong style="color:${s.d30 < 0.5 ? '#4caf50' : '#888'}">+${s.d30.toFixed(2)}%</strong></span>
             <span>7d: <strong style="color:#42a5f5">+${s.d7.toFixed(2)}%</strong></span>
-            <span>1d: <strong style="color:#888">+${s.d1.toFixed(2)}%</strong></span>
-            <span>1y: <strong style="color:#666">+${s.d365.toFixed(2)}%</strong></span>
-            <span>lag: <strong style="color:${lagColor}">${s.lag >= 0 ? '+' : ''}${s.lag.toFixed(3)}%</strong></span>
+            <span>1y: <strong style="color:${s.d365 < 2 ? '#4caf50' : '#666'}">+${s.d365.toFixed(2)}%</strong></span>
+            <span style="color:#333">score: ${s.score.toFixed(2)}</span>
           </div>
-          <div style="font-size:0.72rem;color:#555;line-height:1.4">${thesis}</div>
+          <div style="font-size:0.72rem;color:#555;line-height:1.4">${reason}</div>
         </div>
       </div>`;
   });
@@ -805,7 +875,7 @@ function renderWaterfall() {
   const trades = [...mtdTrades];
 
   const profitsM  = trades.map(t => +(t.profit / 1e6).toFixed(2));
-  const labels    = trades.map(t => `${t.date} · ${t.ticker}`);
+  const labels    = trades.map(t => `${t.ticker !== '???' ? t.ticker : t.date}`);
   let cum = 0;
   const running   = trades.map(t => { cum += t.profit / 1e6; return +cum.toFixed(2); });
 
@@ -847,20 +917,19 @@ function renderWaterfall() {
   let running2 = 0;
   trades.forEach(t => {
     running2 += t.profit;
+    const profitColor = t.profit >= 0 ? 'pos' : 'neg';
     tlt.innerHTML += `
       <tr>
         <td><strong style="color:#c8a84b">${t.date}</strong></td>
-        <td><strong>${t.ticker}</strong> <span style="color:#444;font-size:0.72rem">${t.name}</span></td>
-        <td style="color:#555;font-size:0.75rem">${t.shares.toLocaleString()}</td>
-        <td>$${t.price > 0 ? t.price.toFixed(2) : '—'}</td>
-        <td class="pos">+$${(t.profit / 1e6).toFixed(1)}M</td>
-        <td style="color:#42a5f5">+$${(running2 / 1e6).toFixed(1)}M</td>
+        <td><strong>${t.ticker}</strong> <span style="color:#444;font-size:0.72rem">${t.name !== t.ticker ? t.name : ''}</span></td>
+        <td style="color:#555;font-size:0.75rem">${t.shares > 0 ? t.shares.toLocaleString() : '<span style="color:#333">—</span>'}</td>
+        <td>${t.price > 0 ? '$' + t.price.toFixed(2) : '<span style="color:#333">—</span>'}</td>
+        <td class="${profitColor}">${fmtMoney(t.profit)}</td>
+        <td style="color:#42a5f5">${fmtMoney(running2)}</td>
       </tr>`;
   });
 
-  const totalM = mtdGain / 1e6;
-  document.getElementById('tradeMtdTotal').textContent =
-    `+$${totalM >= 1000 ? (totalM / 1000).toFixed(2) + 'B' : totalM.toFixed(1) + 'M'}`;
+  document.getElementById('tradeMtdTotal').textContent = fmtMoney(mtdGain);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1009,11 +1078,22 @@ function renderMarketTable() {
   [...allStocks].sort((a, b) => (+b.price||0) - (+a.price||0)).forEach(s => {
     const price = +s.price || 0, d1 = +s.d1||0, d7 = +s.d7||0, d30 = +s.d30||0, d365 = +s.d365||0;
     Object.assign(s, { price, d1, d7, d30, d365 }); // normalize in place
-    const ratio  = s.d365 > 0 ? (s.d30 / s.d365) : 0;
-    const signal = ratio > 1.5  ? ['🔥 Recovery', 'tag-green'] :
-                   ratio > 0.8  ? ['📈 Bullish',   'tag-gold']  :
-                   s.d365 > 7   ? ['⭐ Strong',     'tag-blue']  :
-                   ratio < 0.2  ? ['😴 Stagnant',   'tag-gray']  : ['↔ Neutral', 'tag-gray'];
+
+    // Floor-hunting score: lower = deeper price floor = better buy candidate
+    const floorScore = d30 + d365 * 0.5;
+    const atMonthlyFloor = d30 < 0.5;
+    const atYearlyFloor  = d365 < 2.0;
+    const hotStreak      = d30 > 3.0 && d365 > 5.0;
+
+    // Signal: priority order — double floor > monthly only > yearly only > hot streak > neutral
+    const signal = (atMonthlyFloor && atYearlyFloor) ? ['⬇ Double Floor', 'tag-green'] :
+                   atMonthlyFloor                    ? ['📉 Monthly Dip',  'tag-gold']  :
+                   atYearlyFloor                     ? ['📊 Yearly Low',   'tag-blue']  :
+                   hotStreak                         ? ['🔥 Hot Streak',   'tag-purple'] :
+                                                      ['↔ Neutral',       'tag-gray'];
+
+    // Score color: green = great buy opportunity (low score), gray = neutral, red = overextended
+    const scoreColor = floorScore < 1.5 ? '#4caf50' : floorScore < 4 ? '#c8a84b' : '#ef9a9a';
     const dc = v => v >= 0.5 ? '#4caf50' : v >= 0.2 ? '#c8a84b' : '#555';
     tbody.innerHTML += `
       <tr>
@@ -1023,7 +1103,7 @@ function renderMarketTable() {
         <td style="color:${dc(s.d7)}">+${s.d7.toFixed(2)}%</td>
         <td style="color:${dc(s.d30)}"><strong>+${s.d30.toFixed(2)}%</strong></td>
         <td style="color:${dc(s.d365)}">+${s.d365.toFixed(2)}%</td>
-        <td style="color:${ratio > 1 ? '#4caf50' : '#555'}"><strong>${ratio > 0 ? ratio.toFixed(2) + 'x' : '—'}</strong></td>
+        <td style="color:${scoreColor}"><strong>${floorScore.toFixed(2)}</strong></td>
         <td>${s.held ? '<span class="tag tag-gold">HELD</span>' : '<span class="tag tag-gray">—</span>'}</td>
         <td><span class="tag ${signal[1]}">${signal[0]}</span></td>
       </tr>`;
@@ -1081,6 +1161,7 @@ function renderROITable() {
 function renderAll() {
   renderKPIs();
   renderCharts();
+  renderThesis();
   renderTopPicks();
   renderWaterfall();
   renderPositionCards();
@@ -1216,21 +1297,42 @@ async function loadLiveData(apiKey) {
     mtdGain   = 0;
     mtdTrades = [];
     Object.values(sellLogData.log).forEach(entry => {
-      const ts     = parseInt(entry.timestamp, 10) || 0;
-      const profit = parseFloat(entry.data && entry.data.profit) || 0;
+      const ts  = parseInt(entry.timestamp, 10) || 0;
+      const dat = entry.data || {};
+
+      // Torn API uses different field names across versions — try all known variants
+      const profit = parseFloat(dat.profit ?? dat.gain ?? dat.net ?? 0) || 0;
+
       if (ts >= monthStart && ts < monthEnd && profit !== 0) {
         mtdGain += profit;
-        const sid    = entry.data.stock_id;
-        const ticker = entry.data.stock_acronym || idToAcronym[sid] || '???';
-        const name   = idToName[sid] || ticker;
+
+        // Stock ID: try multiple field names
+        const sid = dat.stock_id ?? dat.stockid ?? dat.id ?? null;
+
+        // Ticker: API sometimes has acronym directly, otherwise look up by ID
+        let ticker = dat.acronym || dat.stock_acronym || dat.ticker || idToAcronym[sid] || null;
+
+        // Last-resort fallback: match sell price against allStocks within 2% tolerance
+        if (!ticker && (dat.price || dat.sell_price)) {
+          const sellPrice = parseFloat(dat.price || dat.sell_price) || 0;
+          if (sellPrice > 0) {
+            const match = allStocks.find(s => Math.abs(s.price - sellPrice) / s.price < 0.02);
+            if (match) ticker = match.ticker;
+          }
+        }
+        ticker = ticker || '???';
+
+        const name   = idToName[sid] || allStocks.find(s => s.ticker === ticker)?.name || ticker;
         const d      = new Date(ts * 1000);
-        mtdTrades.push({
-          ts,
+
+        // Shares: try multiple field names
+        const shares = parseInt(dat.shares ?? dat.sold_shares ?? dat.amount ?? 0, 10) || 0;
+        // Price: try multiple field names
+        const price  = parseFloat(dat.price ?? dat.sell_price ?? dat.avg_price ?? 0) || 0;
+
+        mtdTrades.push({ ts,
           date:   d.toLocaleString('default', { month: 'short', day: 'numeric' }),
-          ticker, name,
-          shares: parseInt(entry.data.shares, 10) || 0,
-          price:  parseFloat(entry.data.price)    || 0,
-          profit,
+          ticker, name, shares, price, profit,
         });
       }
     });
@@ -1343,11 +1445,19 @@ async function doRefresh() {
 //  HIDE / RESTORE SYSTEM
 // ═══════════════════════════════════════════════════════════
 const SECTION_LABELS = {
-  kpis: 'KPI Summary Cards', 'charts-main': 'Fund Growth & Allocation',
-  'charts-roi': 'Monthly ROI Charts', thesis: 'Investment Thesis',
-  trades: 'Trade Waterfall', positions: 'Active Position Monitor',
-  heatmap: 'Portfolio Heatmap', holdings: 'Holdings Table',
-  market: 'Market Scanner', history: 'Performance History',
+  kpis:       'KPI Summary Cards',
+  growth:     'Fund Growth Chart',
+  pie:        'Portfolio Allocation',
+  'roi-chart':'Monthly ROI Chart',
+  'dist-chart':'Return Distribution',
+  thesis:     'Investment Thesis & Floor Picks',
+  waterfall:  'MTD Trade Waterfall',
+  'trade-log':'Closed Trades Log',
+  positions:  'Active Position Monitor',
+  heatmap:    'Portfolio Heatmap',
+  holdings:   'Holdings Table',
+  market:     'Market Scanner',
+  history:    'Performance History',
 };
 const HIDDEN_KEY  = 'darkfire_hidden_sections';
 const ORDER_KEY   = 'darkfire_section_order';
