@@ -1502,15 +1502,30 @@ function toggleCustomize() {
 // ═══════════════════════════════════════════════════════════
 //  DRAG & DROP
 // ═══════════════════════════════════════════════════════════
+// Current valid section IDs — bump this list when structure changes so stale orders get reset
+const CURRENT_SECTION_IDS = new Set([
+  'kpis','growth','pie','roi-chart','dist-chart',
+  'thesis','waterfall','trade-log','positions',
+  'heatmap','holdings','market','history'
+]);
+
 function initDragDrop() {
   const container = document.getElementById('sortable-container');
   if (!container || typeof Sortable === 'undefined') return;
   try {
     const saved = JSON.parse(localStorage.getItem(ORDER_KEY) || '[]');
-    if (saved.length) saved.forEach(id => {
-      const el = container.querySelector(`[data-id="${id}"]`);
-      if (el) container.appendChild(el);
-    });
+    // Only apply a saved order if it looks like it came from the current layout.
+    // If none of the saved IDs match current IDs (stale pre-refactor order), ignore it.
+    const validSaved = saved.filter(id => CURRENT_SECTION_IDS.has(id));
+    if (validSaved.length >= 3) {
+      validSaved.forEach(id => {
+        const el = container.querySelector(`[data-id="${id}"]`);
+        if (el) container.appendChild(el);
+      });
+    } else if (saved.length > 0) {
+      // Stale order — clear it so it doesn't cause confusion on next visit
+      localStorage.removeItem(ORDER_KEY);
+    }
   } catch(e) {}
   Sortable.create(container, {
     animation: 180, easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
