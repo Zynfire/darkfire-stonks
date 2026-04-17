@@ -109,6 +109,12 @@ tbody td { padding: 8px 12px; border-bottom: 1px solid #161616; white-space: now
 tbody tr:hover td { background: #161616; }
 tbody tr:last-child td { border-bottom: none; }
 
+/* ── Sortable column headers ── */
+th.sortable { cursor: pointer; user-select: none; transition: color 0.12s; }
+th.sortable:hover { color: #c8a84b; }
+th.sortable.sort-active { color: #c8a84b; }
+.sort-arrow { font-size: 0.7em; margin-left: 3px; opacity: 0.7; }
+
 /* ── Tags ── */
 .tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em; }
 .tag-green  { background: #0d2414; color: #4caf50; border: 1px solid #4caf5033; }
@@ -440,9 +446,10 @@ body.customize-mode .drag-block { outline: 1px dashed #2a2a2a; border-radius: 8p
   <div class="heatmap-grid" id="heatmapGrid"></div>
   <div style="margin-top:14px;display:flex;gap:20px;align-items:center;flex-wrap:wrap">
     <span style="font-size:0.68rem;color:#444">Scale →</span>
-    <div style="display:flex;gap:4px;align-items:center"><div style="width:36px;height:7px;background:#3d1212;border-radius:2px"></div><span style="font-size:0.65rem;color:#555">&lt;0.5%</span></div>
-    <div style="display:flex;gap:4px;align-items:center"><div style="width:36px;height:7px;background:#3d2e08;border-radius:2px"></div><span style="font-size:0.65rem;color:#555">0.5–1%</span></div>
-    <div style="display:flex;gap:4px;align-items:center"><div style="width:36px;height:7px;background:#3d3a08;border-radius:2px"></div><span style="font-size:0.65rem;color:#555">1–2%</span></div>
+    <div style="display:flex;gap:4px;align-items:center"><div style="width:36px;height:7px;background:#4d0808;border-radius:2px"></div><span style="font-size:0.65rem;color:#ef5350">&lt;−2% 🔥</span></div>
+    <div style="display:flex;gap:4px;align-items:center"><div style="width:36px;height:7px;background:#3d1010;border-radius:2px"></div><span style="font-size:0.65rem;color:#ef9a9a">−2–0%</span></div>
+    <div style="display:flex;gap:4px;align-items:center"><div style="width:36px;height:7px;background:#2a1010;border-radius:2px"></div><span style="font-size:0.65rem;color:#555">0–0.5%</span></div>
+    <div style="display:flex;gap:4px;align-items:center"><div style="width:36px;height:7px;background:#3d2e08;border-radius:2px"></div><span style="font-size:0.65rem;color:#555">0.5–2%</span></div>
     <div style="display:flex;gap:4px;align-items:center"><div style="width:36px;height:7px;background:#0d2e14;border-radius:2px"></div><span style="font-size:0.65rem;color:#555">2–3%</span></div>
     <div style="display:flex;gap:4px;align-items:center"><div style="width:36px;height:7px;background:#0d4020;border-radius:2px"></div><span style="font-size:0.65rem;color:#555">&gt;3%</span></div>
     <div style="display:flex;gap:4px;align-items:center"><div style="width:10px;height:10px;border-radius:50%;background:#c8a84b"></div><span style="font-size:0.65rem;color:#555">held</span></div>
@@ -458,7 +465,20 @@ body.customize-mode .drag-block { outline: 1px dashed #2a2a2a; border-radius: 8p
   <div class="section-title"><span class="dot"></span>Current Holdings — Price Performance</div>
   <div class="tbl-wrap">
     <table>
-      <thead><tr><th>Stock</th><th>Type</th><th>Shares</th><th>Price</th><th>Portfolio Value</th><th>Allocation</th><th>Since Buy</th><th>24h Δ</th><th>7d Δ</th><th>1m Δ</th><th>1y Δ</th><th>Trend</th></tr></thead>
+      <thead id="holdingsThead"><tr>
+        <th class="sortable" onclick="sortHoldings('name')">Stock</th>
+        <th>Type</th>
+        <th class="sortable" onclick="sortHoldings('shares')">Shares</th>
+        <th class="sortable" onclick="sortHoldings('price')">Price</th>
+        <th class="sortable" onclick="sortHoldings('value')">Portfolio Value</th>
+        <th class="sortable" onclick="sortHoldings('alloc')">Allocation</th>
+        <th class="sortable" onclick="sortHoldings('unrlz')">Since Buy</th>
+        <th class="sortable" onclick="sortHoldings('d1')">24h Δ</th>
+        <th class="sortable" onclick="sortHoldings('d7')">7d Δ</th>
+        <th class="sortable" onclick="sortHoldings('d30')">1m Δ</th>
+        <th class="sortable" onclick="sortHoldings('d365')">1y Δ</th>
+        <th>Trend</th>
+      </tr></thead>
       <tbody id="holdingsTable"></tbody>
     </table>
   </div>
@@ -473,7 +493,17 @@ body.customize-mode .drag-block { outline: 1px dashed #2a2a2a; border-radius: 8p
   <div class="section-title"><span class="dot"></span>Full Market Scanner — All 35 Stocks</div>
   <div class="tbl-wrap">
     <table>
-      <thead><tr><th>Stock</th><th>Price</th><th>24h Δ</th><th>7d Δ</th><th>1m Δ</th><th>1y Δ</th><th>Floor Score</th><th>Held</th><th>Signal</th></tr></thead>
+      <thead id="marketThead"><tr>
+        <th class="sortable" onclick="sortMarket('name')">Stock</th>
+        <th class="sortable" onclick="sortMarket('price')">Price</th>
+        <th class="sortable" onclick="sortMarket('d1')">24h Δ</th>
+        <th class="sortable" onclick="sortMarket('d7')">7d Δ</th>
+        <th class="sortable" onclick="sortMarket('d30')">1m Δ</th>
+        <th class="sortable" onclick="sortMarket('d365')">1y Δ</th>
+        <th class="sortable sort-active" onclick="sortMarket('score')">Floor Score <span class="sort-arrow">▲</span></th>
+        <th>Held</th>
+        <th class="sortable" onclick="sortMarket('signal')">Signal</th>
+      </tr></thead>
       <tbody id="marketTable"></tbody>
     </table>
   </div>
@@ -604,6 +634,22 @@ function fmtMoney(dollars, sign = true) {
   if (abs >= 1e9)  return `${s}$${(abs / 1e9).toFixed(2)}B`;
   if (abs >= 1e6)  return `${s}$${(abs / 1e6).toFixed(1)}M`;
   return `${s}$${abs.toLocaleString()}`;
+}
+
+// Percent formatter — handles negatives, always shows sign
+function fmtPct(v, decimals = 2) {
+  const n = +v || 0;
+  return `${n >= 0 ? '+' : ''}${n.toFixed(decimals)}%`;
+}
+
+// Color for a % change cell — green positive, gold near-zero, red negative
+function dcColor(v) {
+  const n = +v || 0;
+  if (n >= 2)    return '#4caf50';
+  if (n >= 0.3)  return '#c8a84b';
+  if (n >= -0.3) return '#555';
+  if (n >= -2)   return '#ef9a9a';
+  return '#ef5350';
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -805,54 +851,57 @@ function renderThesis() {
 //  RENDER — Top 5 Floor Buy Picks
 // ═══════════════════════════════════════════════════════════
 function renderTopPicks() {
-  // Floor-hunting: lowest combined d30 + d365 = most at price floor = most upside
+  // Floor-hunting: lowest combined d30 + d365*0.5 score = deepest floor = most recovery upside
   const topPicks = [...allStocks]
     .filter(s => !ACTIVE_TICKERS.has(s.ticker))
     .map(s => {
       const d30  = +s.d30  || 0;
       const d365 = +s.d365 || 0;
-      const score = d30 + d365 * 0.5; // lower = deeper floor
-      const atMonthlyFloor = d30 < 0.5;
-      const atYearlyFloor  = d365 < 2.0;
-      return { ...s, d30, d365, score, atMonthlyFloor, atYearlyFloor };
+      const d7   = +s.d7   || 0;
+      const { score, signal, signalClass } = calcFloorSignal(d30, d365);
+      return { ...s, d30, d365, d7, score, signal, signalClass };
     })
-    .sort((a, b) => a.score - b.score)
+    .sort((a, b) => a.score - b.score)  // ascending: lowest score = deepest floor
     .slice(0, 5);
 
-  const rankColors = ['#c8a84b','#42a5f5','#4caf50','#ab47bc','#ef9a9a'];
+  const rankColors = ['#c8a84b','#4caf50','#42a5f5','#ab47bc','#ef9a9a'];
   const el = document.getElementById('topPicksList');
   el.innerHTML = '';
   topPicks.forEach((s, i) => {
-    const floorTag  = s.atMonthlyFloor && s.atYearlyFloor
-      ? `<span class="tag tag-green" style="font-size:0.6rem;margin-left:4px">⬇ DOUBLE FLOOR</span>`
-      : s.atMonthlyFloor
-        ? `<span class="tag tag-gold" style="font-size:0.6rem;margin-left:4px">⬇ MONTHLY LOW</span>`
-        : s.atYearlyFloor
-          ? `<span class="tag tag-blue" style="font-size:0.6rem;margin-left:4px">⬇ YEARLY LOW</span>`
-          : '';
-    const heldTag   = s.held ? `<span class="tag tag-gray" style="font-size:0.6rem;margin-left:4px">HELD</span>` : '';
-    const reason = s.atMonthlyFloor && s.atYearlyFloor
-      ? `Near both monthly and yearly floor — maximum recovery room. Floor score: ${s.score.toFixed(2)}`
-      : s.atMonthlyFloor
-        ? `At monthly floor (only +${s.d30.toFixed(2)}% this month) — primed for recovery.`
-        : `At yearly floor (+${s.d365.toFixed(2)}% annual) — long-term accumulation zone.`;
+    const heldTag = s.held ? `<span class="tag tag-gray" style="font-size:0.6rem;margin-left:4px">HELD</span>` : '';
+
+    // Build reason text based on the signal
+    let reason;
+    if (s.d30 < 0 && s.d365 < 0)
+      reason = `Price is down ${Math.abs(s.d30).toFixed(2)}% this month and ${Math.abs(s.d365).toFixed(2)}% this year — active dip. Maximum recovery upside.`;
+    else if (s.d30 < 0)
+      reason = `Down ${Math.abs(s.d30).toFixed(2)}% this month despite being ${fmtPct(s.d365)} on the year — short-term dip, strong recovery candidate.`;
+    else if (s.d365 < 0)
+      reason = `Down ${Math.abs(s.d365).toFixed(2)}% on the year — trading below its starting price. Long-term accumulation zone.`;
+    else if (s.d30 < 0.5 && s.d365 < 1.5)
+      reason = `Barely ${fmtPct(s.d30)} this month and only ${fmtPct(s.d365)} this year — at both monthly and yearly floor. Floor score: ${s.score.toFixed(2)}.`;
+    else if (s.d30 < 0.5)
+      reason = `Only ${fmtPct(s.d30)} this month — at monthly floor. Primed for recovery. Floor score: ${s.score.toFixed(2)}.`;
+    else if (s.d365 < 1.5)
+      reason = `Only ${fmtPct(s.d365)} this year — at yearly floor. Long-term accumulation opportunity. Floor score: ${s.score.toFixed(2)}.`;
+    else
+      reason = `Floor score ${s.score.toFixed(2)} — lowest available outside active positions.`;
 
     el.innerHTML += `
       <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #1a1a1a${i===4?';border-bottom:none':''}">
         <div style="min-width:28px;height:28px;border-radius:50%;background:${rankColors[i]}22;border:1px solid ${rankColors[i]}44;
-          display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:700;color:${rankColors[i]};flex-shrink:0">
-          #${i+1}
-        </div>
+          display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:700;color:${rankColors[i]};flex-shrink:0">#${i+1}</div>
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:3px">
             <strong style="color:#d8d8d8;font-size:0.84rem">${s.ticker}</strong>
             <span style="color:#444;font-size:0.72rem">${s.name}</span>
-            ${floorTag}${heldTag}
+            <span class="tag ${s.signalClass}" style="font-size:0.6rem;margin-left:4px">${s.signal}</span>
+            ${heldTag}
           </div>
           <div style="display:flex;gap:10px;font-size:0.72rem;color:#555;margin-bottom:4px">
-            <span>1m: <strong style="color:${s.d30 < 0.5 ? '#4caf50' : '#888'}">+${s.d30.toFixed(2)}%</strong></span>
-            <span>7d: <strong style="color:#42a5f5">+${s.d7.toFixed(2)}%</strong></span>
-            <span>1y: <strong style="color:${s.d365 < 2 ? '#4caf50' : '#666'}">+${s.d365.toFixed(2)}%</strong></span>
+            <span>1m: <strong style="color:${dcColor(s.d30)}">${fmtPct(s.d30)}</strong></span>
+            <span>7d: <strong style="color:${dcColor(s.d7)}">${fmtPct(s.d7)}</strong></span>
+            <span>1y: <strong style="color:${dcColor(s.d365)}">${fmtPct(s.d365)}</strong></span>
             <span style="color:#333">score: ${s.score.toFixed(2)}</span>
           </div>
           <div style="font-size:0.72rem;color:#555;line-height:1.4">${reason}</div>
@@ -1005,21 +1054,61 @@ function renderHeatmap() {
   [...allStocks].sort((a, b) => (+b.d30||0) - (+a.d30||0)).forEach(s => {
     const d30 = +s.d30 || 0;
     let bg, textCol;
-    if      (d30 >= 4)   { bg = '#0d4020'; textCol = '#6ee89a'; }
-    else if (d30 >= 3)   { bg = '#0d3018'; textCol = '#4caf50'; }
-    else if (d30 >= 2)   { bg = '#112b12'; textCol = '#81c784'; }
-    else if (d30 >= 1)   { bg = '#252206'; textCol = '#c8a84b'; }
-    else if (d30 >= 0.5) { bg = '#2a1a06'; textCol = '#ff9800'; }
-    else                 { bg = '#2a1010'; textCol = '#ef9a9a'; }
+    if      (d30 >= 4)    { bg = '#0d4020'; textCol = '#6ee89a'; }
+    else if (d30 >= 3)    { bg = '#0d3018'; textCol = '#4caf50'; }
+    else if (d30 >= 2)    { bg = '#112b12'; textCol = '#81c784'; }
+    else if (d30 >= 1)    { bg = '#252206'; textCol = '#c8a84b'; }
+    else if (d30 >= 0.5)  { bg = '#2a1a06'; textCol = '#ff9800'; }
+    else if (d30 >= 0)    { bg = '#2a1010'; textCol = '#ef9a9a'; }   // near zero — floor signal
+    else if (d30 >= -2)   { bg = '#3d1010'; textCol = '#ef5350'; }   // declining — buy signal
+    else                  { bg = '#4d0808'; textCol = '#ff4444'; }   // significant dip — strong buy
     const border = s.held ? 'border:1.5px solid #c8a84b55;' : 'border:1px solid #1e1e1e;';
     const dot    = s.held ? `<div class="hm-held-dot"></div>` : '';
     grid.innerHTML += `
       <div class="hm-cell" style="background:${bg};${border}"
-        title="${s.name} | 1m: +${d30.toFixed(2)}% | 7d: +${(+s.d7||0).toFixed(2)}% | 1y: +${(+s.d365||0).toFixed(2)}%">
+        title="${s.name} | 1m: ${fmtPct(d30)} | 7d: ${fmtPct(+s.d7||0)} | 1y: ${fmtPct(+s.d365||0)}">
         <div class="hm-ticker" style="color:${textCol}">${s.ticker}</div>
-        <div class="hm-val"    style="color:${textCol}">+${d30.toFixed(2)}%</div>
+        <div class="hm-val"    style="color:${textCol}">${fmtPct(d30)}</div>
         ${dot}
       </div>`;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SORTABLE TABLE STATE
+// ═══════════════════════════════════════════════════════════
+let holdingsSort = { col: 'value', dir: -1 };   // default: highest value first
+let marketSort   = { col: 'score', dir:  1 };   // default: lowest floor score first (best buys)
+
+function sortHoldings(col) {
+  holdingsSort.dir = (holdingsSort.col === col) ? -holdingsSort.dir : -1;
+  holdingsSort.col = col;
+  renderHoldingsTable();
+}
+function sortMarket(col) {
+  // For score: ascending by default (lowest = best buy). For everything else: descending.
+  const defaultDir = col === 'score' ? 1 : col === 'name' || col === 'signal' ? 1 : -1;
+  marketSort.dir = (marketSort.col === col) ? -marketSort.dir : defaultDir;
+  marketSort.col = col;
+  renderMarketTable();
+}
+
+// Updates header cells to show active sort column + direction arrow
+function updateSortHeaders(theadId, sortState, colMap) {
+  const thead = document.getElementById(theadId);
+  if (!thead) return;
+  thead.querySelectorAll('th.sortable').forEach(th => {
+    const col = colMap[th.textContent.trim().replace(/[▲▼\s]+$/, '').trim()];
+    if (!col) return;
+    th.classList.toggle('sort-active', col === sortState.col);
+    // Remove existing arrow spans
+    th.querySelectorAll('.sort-arrow').forEach(s => s.remove());
+    if (col === sortState.col) {
+      const arrow = document.createElement('span');
+      arrow.className = 'sort-arrow';
+      arrow.textContent = sortState.dir === 1 ? ' ▲' : ' ▼';
+      th.appendChild(arrow);
+    }
   });
 }
 
@@ -1028,26 +1117,56 @@ function renderHeatmap() {
 // ═══════════════════════════════════════════════════════════
 function renderHoldingsTable() {
   const { holdings, totalValue } = getPortfolio();
-  const sorted = [...holdings].sort((a, b) => b.value - a.value);
+
+  // Sort by active column
+  const colVal = h => {
+    switch (holdingsSort.col) {
+      case 'name':   return h.name.toLowerCase();
+      case 'shares': return h.shares;
+      case 'price':  return h.price;
+      case 'alloc':  return h.value / totalValue;
+      case 'unrlz':  return h.unrlzPct ?? -999;
+      case 'd1':     return +h.d1 || 0;
+      case 'd7':     return +h.d7 || 0;
+      case 'd30':    return +h.d30 || 0;
+      case 'd365':   return +h.d365 || 0;
+      default:       return h.value;  // 'value'
+    }
+  };
+  const sorted = [...holdings].sort((a, b) => {
+    const av = colVal(a), bv = colVal(b);
+    if (typeof av === 'string') return av < bv ? -holdingsSort.dir : av > bv ? holdingsSort.dir : 0;
+    return holdingsSort.dir * (bv - av);
+  });
+
+  // Update sort indicators on header
+  const hColMap = {
+    'Stock':'name','Shares':'shares','Price':'price',
+    'Portfolio Value':'value','Allocation':'alloc','Since Buy':'unrlz',
+    '24h Δ':'d1','7d Δ':'d7','1m Δ':'d30','1y Δ':'d365'
+  };
+  updateSortHeaders('holdingsThead', holdingsSort, hColMap);
+
+  const maxVal = sorted[0]?.value || 1;
   const tbody  = document.getElementById('holdingsTable');
   tbody.innerHTML = '';
+
   sorted.forEach(h => {
-    const pct      = (h.value / totalValue * 100);
-    const barW     = Math.min(100, pct / (sorted[0].value / totalValue * 100) * 100);
-    const barColor = pct > 50 ? '#c8a84b' : pct > 10 ? '#42a5f5' : '#4caf50';
-    const dc       = v => v >= 0.5 ? '#4caf50' : v >= 0.2 ? '#c8a84b' : '#666';
-    const trend    = [h.d1, h.d7, h.d30, h.d365];
-    const maxT     = Math.max(...trend, 0.01);
+    const allocPct  = h.value / totalValue * 100;
+    const barW      = Math.min(100, h.value / maxVal * 100);
+    const barColor  = allocPct > 50 ? '#c8a84b' : allocPct > 10 ? '#42a5f5' : '#4caf50';
+    const trend     = [+h.d1||0, +h.d7||0, +h.d30||0, +h.d365||0];
+    const maxT      = Math.max(...trend.map(Math.abs), 0.01);
     const trendHtml = trend.map(v => {
-      const h_px = Math.max(3, Math.round(v / maxT * 18));
-      const c    = v === Math.max(...trend) ? '#c8a84b' : v >= 1 ? '#4caf50' : '#2a2a2a';
+      const h_px = Math.max(2, Math.round(Math.abs(v) / maxT * 18));
+      const c    = v < 0 ? '#ef5350' : v >= 1 ? '#4caf50' : '#2a2a2a';
       return `<span style="height:${h_px}px;background:${c}"></span>`;
     }).join('');
     const typeBadge = ACTIVE_TICKERS.has(h.ticker)
       ? '<span class="tag tag-gold">TRADE</span>'
       : '<span class="tag tag-gray">HOLD</span>';
     const unrlzCell = (h.unrlzPct !== null && h.unrlzPct !== undefined)
-      ? `<span style="color:${h.unrlzPct >= 0 ? '#4caf50' : '#ef5350'}">${h.unrlzPct >= 0 ? '+' : ''}${h.unrlzPct.toFixed(2)}%</span>`
+      ? `<span style="color:${h.unrlzPct >= 0 ? '#4caf50' : '#ef5350'}">${fmtPct(h.unrlzPct)}</span>`
       : '<span style="color:#333">—</span>';
 
     tbody.innerHTML += `
@@ -1058,12 +1177,12 @@ function renderHoldingsTable() {
         <td>$${h.price.toFixed(2)}</td>
         <td><strong>$${(h.value / 1e9).toFixed(1)}B</strong>
           <div class="mini-bar"><div class="mini-bar-fill" style="width:${barW}%;background:${barColor}"></div></div></td>
-        <td style="color:${barColor}">${pct.toFixed(2)}%</td>
+        <td style="color:${barColor}">${allocPct.toFixed(2)}%</td>
         <td>${unrlzCell}</td>
-        <td style="color:${dc(h.d1)}">+${h.d1.toFixed(2)}%</td>
-        <td style="color:${dc(h.d7)}">+${h.d7.toFixed(2)}%</td>
-        <td style="color:${dc(h.d30)}"><strong>+${h.d30.toFixed(2)}%</strong></td>
-        <td style="color:${dc(h.d365)}">+${h.d365.toFixed(2)}%</td>
+        <td style="color:${dcColor(h.d1)}">${fmtPct(h.d1)}</td>
+        <td style="color:${dcColor(h.d7)}">${fmtPct(h.d7)}</td>
+        <td style="color:${dcColor(h.d30)}"><strong>${fmtPct(h.d30)}</strong></td>
+        <td style="color:${dcColor(h.d365)}">${fmtPct(h.d365)}</td>
         <td><div class="trend-bars">${trendHtml}</div></td>
       </tr>`;
   });
@@ -1072,40 +1191,108 @@ function renderHoldingsTable() {
 // ═══════════════════════════════════════════════════════════
 //  RENDER — Market Scanner
 // ═══════════════════════════════════════════════════════════
+// Shared floor-score + signal logic used by scanner and top picks
+function calcFloorSignal(d30, d365) {
+  const score = d30 + d365 * 0.5;  // lower = deeper floor = better buy
+
+  // ─── KEY INSIGHT ───────────────────────────────────────────────────────────
+  // d30 / d365 are cumulative gains FROM 30/365 days ago TO NOW.
+  // A stock with d365=7% but d30=0.1% grew EARLIER in the year and just paused.
+  // That's a plateau after a run-up — NOT a floor. So "Monthly Low" must also
+  // check that the annual performance wasn't already strong (< ~6% annual).
+  //
+  // Similarly a stock with d365=0.8% but d30=1.5% already recovered off its
+  // annual low this month — the buy window has partly passed. So "Slow Annual"
+  // must also confirm the stock isn't actively rebounding (d30 < ~1.0%).
+  // ───────────────────────────────────────────────────────────────────────────
+
+  let signal, signalClass;
+
+  // 1. Actual price declines — highest confidence floor signals
+  if      (d30 < 0 && d365 < 0) { signal = '🔻 Both Declining'; signalClass = 'tag-red';  }
+  else if (d30 < 0)              { signal = '📉 Monthly Drop';   signalClass = 'tag-red';  }
+  else if (d365 < 0)             { signal = '📊 Annual Drop';    signalClass = 'tag-blue'; }
+
+  // 2. Near floor on BOTH timeframes — genuinely weak overall
+  //    Requires: slow month (<0.5%) AND slow year (<2%) — both stagnant
+  else if (d30 < 0.5 && d365 < 2.0)
+    { signal = '⬇ Double Floor'; signalClass = 'tag-green'; }
+
+  // 3. Slow month — only flag if the annual pace is also modest (<6%).
+  //    Excludes: stocks that ran up 7%+ this year and are just pausing.
+  //    A hot-annual stock that slows for a month is at a plateau, not a floor.
+  else if (d30 < 0.5 && d365 < 6.0)
+    { signal = '⬇ Monthly Flat'; signalClass = 'tag-gold'; }
+
+  // 4. Slow annual — only flag if this month isn't already recovering (d30 < 1.0).
+  //    Excludes: stocks bouncing off their yearly low that already moved 1%+ this month.
+  else if (d365 < 2.0 && d30 < 1.0)
+    { signal = '⬇ Slow Annual';  signalClass = 'tag-blue'; }
+
+  // 5. Hot streak — running well above typical pace, higher entry risk
+  else if (d30 > 3.5 || (d30 > 2.0 && d365 > 8.0))
+    { signal = '🔥 Hot Streak';  signalClass = 'tag-purple'; }
+
+  // 6. Everything else
+  else { signal = '↔ Neutral'; signalClass = 'tag-gray'; }
+
+  // Score color: green = great buy (low/negative score), gold = ok, red = overextended
+  const scoreColor = score < 0    ? '#4caf50' :
+                     score < 1.5  ? '#81c784' :
+                     score < 4.0  ? '#c8a84b' :
+                     score < 8.0  ? '#ef9a9a' : '#ef5350';
+  return { score, signal, signalClass, scoreColor };
+}
+
 function renderMarketTable() {
+  // Normalize values first
+  const stocks = allStocks.map(s => ({
+    ...s,
+    price: +s.price || 0, d1: +s.d1||0, d7: +s.d7||0, d30: +s.d30||0, d365: +s.d365||0
+  }));
+
+  // Sort
+  const colVal = s => {
+    const { score, signal } = calcFloorSignal(s.d30, s.d365);
+    switch (marketSort.col) {
+      case 'name':   return s.name.toLowerCase();
+      case 'price':  return s.price;
+      case 'd1':     return s.d1;
+      case 'd7':     return s.d7;
+      case 'd30':    return s.d30;
+      case 'd365':   return s.d365;
+      case 'signal': return signal;
+      default:       return score;  // 'score'
+    }
+  };
+  const sorted = [...stocks].sort((a, b) => {
+    const av = colVal(a), bv = colVal(b);
+    if (typeof av === 'string') return av < bv ? -marketSort.dir : av > bv ? marketSort.dir : 0;
+    return marketSort.dir * (av - bv);
+  });
+
+  // Update sort indicators
+  const mColMap = {
+    'Stock':'name','Price':'price','24h Δ':'d1','7d Δ':'d7',
+    '1m Δ':'d30','1y Δ':'d365','Floor Score':'score','Signal':'signal'
+  };
+  updateSortHeaders('marketThead', marketSort, mColMap);
+
   const tbody = document.getElementById('marketTable');
   tbody.innerHTML = '';
-  [...allStocks].sort((a, b) => (+b.price||0) - (+a.price||0)).forEach(s => {
-    const price = +s.price || 0, d1 = +s.d1||0, d7 = +s.d7||0, d30 = +s.d30||0, d365 = +s.d365||0;
-    Object.assign(s, { price, d1, d7, d30, d365 }); // normalize in place
-
-    // Floor-hunting score: lower = deeper price floor = better buy candidate
-    const floorScore = d30 + d365 * 0.5;
-    const atMonthlyFloor = d30 < 0.5;
-    const atYearlyFloor  = d365 < 2.0;
-    const hotStreak      = d30 > 3.0 && d365 > 5.0;
-
-    // Signal: priority order — double floor > monthly only > yearly only > hot streak > neutral
-    const signal = (atMonthlyFloor && atYearlyFloor) ? ['⬇ Double Floor', 'tag-green'] :
-                   atMonthlyFloor                    ? ['📉 Monthly Dip',  'tag-gold']  :
-                   atYearlyFloor                     ? ['📊 Yearly Low',   'tag-blue']  :
-                   hotStreak                         ? ['🔥 Hot Streak',   'tag-purple'] :
-                                                      ['↔ Neutral',       'tag-gray'];
-
-    // Score color: green = great buy opportunity (low score), gray = neutral, red = overextended
-    const scoreColor = floorScore < 1.5 ? '#4caf50' : floorScore < 4 ? '#c8a84b' : '#ef9a9a';
-    const dc = v => v >= 0.5 ? '#4caf50' : v >= 0.2 ? '#c8a84b' : '#555';
+  sorted.forEach(s => {
+    const { score, signal, signalClass, scoreColor } = calcFloorSignal(s.d30, s.d365);
     tbody.innerHTML += `
       <tr>
         <td><strong>${s.name}</strong> <span style="color:#333;font-size:0.72rem">${s.ticker}</span></td>
         <td>$${s.price.toFixed(2)}</td>
-        <td style="color:${dc(s.d1)}">+${s.d1.toFixed(2)}%</td>
-        <td style="color:${dc(s.d7)}">+${s.d7.toFixed(2)}%</td>
-        <td style="color:${dc(s.d30)}"><strong>+${s.d30.toFixed(2)}%</strong></td>
-        <td style="color:${dc(s.d365)}">+${s.d365.toFixed(2)}%</td>
-        <td style="color:${scoreColor}"><strong>${floorScore.toFixed(2)}</strong></td>
+        <td style="color:${dcColor(s.d1)}">${fmtPct(s.d1)}</td>
+        <td style="color:${dcColor(s.d7)}">${fmtPct(s.d7)}</td>
+        <td style="color:${dcColor(s.d30)}"><strong>${fmtPct(s.d30)}</strong></td>
+        <td style="color:${dcColor(s.d365)}">${fmtPct(s.d365)}</td>
+        <td style="color:${scoreColor}"><strong>${score.toFixed(2)}</strong></td>
         <td>${s.held ? '<span class="tag tag-gold">HELD</span>' : '<span class="tag tag-gray">—</span>'}</td>
-        <td><span class="tag ${signal[1]}">${signal[0]}</span></td>
+        <td><span class="tag ${signalClass}">${signal}</span></td>
       </tr>`;
   });
 }
@@ -1225,10 +1412,11 @@ async function loadLiveData(apiKey) {
       const d7   = parseFloat(apiS.change_week);
       const d30  = parseFloat(apiS.change_month);
       const d365 = parseFloat(apiS.change_year);
-      if (!isNaN(d1))   stock.d1   = Math.abs(d1);
-      if (!isNaN(d7))   stock.d7   = Math.abs(d7);
-      if (!isNaN(d30))  stock.d30  = Math.abs(d30);
-      if (!isNaN(d365)) stock.d365 = Math.abs(d365);
+      // Keep the raw sign — stocks CAN be negative (down from reference point)
+      if (!isNaN(d1))   stock.d1   = d1;
+      if (!isNaN(d7))   stock.d7   = d7;
+      if (!isNaN(d30))  stock.d30  = d30;
+      if (!isNaN(d365)) stock.d365 = d365;
     });
   }
 
