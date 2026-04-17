@@ -283,9 +283,10 @@ body.customize-mode .drag-block { outline: 1px dashed #2a2a2a; border-radius: 8p
         Refresh
       </button>
       <button class="hdr-btn" id="customizeBtn" onclick="toggleCustomize()">⚙ Customize</button>
+      <button class="hdr-btn" id="clearHistBtn" onclick="clearPriceHistory()" title="Reset accumulated price history (useful if history seems wrong)">🗑 Clear History</button>
       <span class="badge" id="liveBadge">CACHED DATA</span>
     </div>
-    <div class="updated" id="lastUpdated">Cached: April 10, 2026 · Manager: Darkfire [#1631210]</div>
+    <div class="updated" id="lastUpdated">Cached: April 17, 2026 · Manager: Darkfire [#1631210]</div>
   </div>
 </div>
 
@@ -571,45 +572,150 @@ const fund39End   = [38416,48447,59908,60987,72364,92646,95083,96471,98193,10424
 //  MUTABLE STATE — patched by live API fetch
 // ═══════════════════════════════════════════════════════════
 
-// Default data from Apr 10 2026 snapshot (shown immediately on load)
-// d1/d7/d30/d365 from Torn UI Apr 10 — updated when API provides them
+// Live snapshot from Torn stock market page — Apr 17, 2026
+// d1/d7/d30/d365 scraped directly from torn.com/page.php?sid=stocks
+// Prices + positions updated on each API refresh; history auto-accumulates via HIST_KEY
 let allStocks = [
-  {name:'Torn & Shanghai Banking',  ticker:'TSB', price:1189.91, d1:0.75, d7:0.94,  d30:0.16, d365:4.95,  held:false, shares:0,          unrlzPct:null},
-  {name:'Torn City Investments',    ticker:'TCI', price:1183.94, d1:1.20, d7:1.46,  d30:0.95, d365:4.16,  held:true,  shares:1500000,    unrlzPct:-1.165},
-  {name:'Crude & Co',               ticker:'CNC', price:893.95,  d1:0.17, d7:0.53,  d30:0.93, d365:7.89,  held:false, shares:0,          unrlzPct:null},
-  {name:'Feathery Hotels Group',    ticker:'FHG', price:880.02,  d1:3.88, d7:1.79,  d30:3.89, d365:7.71,  held:true,  shares:6000000,    unrlzPct:5.488},
-  {name:'Mc Smoogle Corp',          ticker:'MCS', price:812.94,  d1:1.35, d7:1.80,  d30:2.04, d365:5.71,  held:true,  shares:10850000,   unrlzPct:3.52},
-  {name:'Wind Lines Travel',        ticker:'WLT', price:791.29,  d1:0.04, d7:1.75,  d30:0.13, d365:7.11,  held:true,  shares:9000000,    unrlzPct:0.887},
-  {name:'Symbiotic Ltd.',           ticker:'SYM', price:714.27,  d1:0.21, d7:0.95,  d30:0.17, d365:2.88,  held:true,  shares:1500000,    unrlzPct:3.959},
-  {name:'Syscore MFG',              ticker:'SYS', price:682.65,  d1:0.13, d7:0.31,  d30:1.48, d365:4.56,  held:false, shares:0,          unrlzPct:null},
-  {name:'Evil Ducks Candy Corp',    ticker:'EVL', price:657.61,  d1:0.78, d7:0.12,  d30:0.60, d365:4.28,  held:false, shares:0,          unrlzPct:null},
-  {name:'Performance Ribaldry',     ticker:'PRN', price:606.68,  d1:1.59, d7:0.41,  d30:1.43, d365:1.63,  held:true,  shares:1000000,    unrlzPct:1.669},
-  {name:'Munster Beverage Corp.',   ticker:'MUN', price:561.08,  d1:0.93, d7:0.72,  d30:0.63, d365:5.15,  held:true,  shares:5000000,    unrlzPct:0.619},
-  {name:'Lucky Shot Casino',        ticker:'LSC', price:542.66,  d1:0.26, d7:0.77,  d30:4.07, d365:2.12,  held:true,  shares:627147883,  unrlzPct:-1.276},
-  {name:'International School TC',  ticker:'IST', price:520.89,  d1:0.70, d7:0.58,  d30:0.68, d365:1.50,  held:false, shares:0,          unrlzPct:null},
-  {name:'TC Media Productions',     ticker:'TCP', price:515.75,  d1:0.42, d7:0.80,  d30:1.97, d365:3.97,  held:false, shares:0,          unrlzPct:null},
-  {name:'Torn City Clothing',       ticker:'TCC', price:508.35,  d1:0.27, d7:0.34,  d30:0.38, d365:4.86,  held:false, shares:0,          unrlzPct:null},
-  {name:'Big Al\'s Gun Shop',       ticker:'BAG', price:503.46,  d1:1.52, d7:0.20,  d30:1.25, d365:7.43,  held:true,  shares:9000000,    unrlzPct:4.038},
-  {name:'Legal Authorities Group',  ticker:'LAG', price:456.50,  d1:0.21, d7:1.61,  d30:1.41, d365:1.95,  held:false, shares:0,          unrlzPct:null},
-  {name:'Herbal Releaf Co.',        ticker:'CBD', price:406.19,  d1:0.06, d7:0.32,  d30:0.35, d365:7.48,  held:false, shares:0,          unrlzPct:null},
-  {name:'Torn City Health Service', ticker:'THS', price:383.97,  d1:1.54, d7:0.77,  d30:1.82, d365:6.17,  held:true,  shares:6717358,    unrlzPct:0.966},
-  {name:'Alcoholics Synonymous',    ticker:'ASS', price:358.65,  d1:1.43, d7:0.73,  d30:1.52, d365:3.41,  held:false, shares:0,          unrlzPct:null},
-  {name:'The Torn City Times',      ticker:'TCT', price:324.83,  d1:0.92, d7:0.08,  d30:1.47, d365:0.82,  held:true,  shares:100000,     unrlzPct:-0.457},
-  {name:'Empty Lunchbox Traders',   ticker:'ELT', price:312.38,  d1:0.25, d7:0.05,  d30:0.30, d365:0.68,  held:false, shares:0,          unrlzPct:null},
-  {name:'Grain',                    ticker:'GRN', price:310.66,  d1:0.09, d7:0.93,  d30:0.36, d365:4.11,  held:true,  shares:500000,     unrlzPct:0.801},
-  {name:'Torn City Motors',         ticker:'TCM', price:302.05,  d1:0.21, d7:0.45,  d30:0.07, d365:4.39,  held:true,  shares:1000000,    unrlzPct:5.771},
-  {name:'Eaglewood Mercenary',      ticker:'EWM', price:287.65,  d1:0.70, d7:0.25,  d30:0.66, d365:3.94,  held:true,  shares:1000000,    unrlzPct:3.056},
-  {name:'Messaging Inc.',           ticker:'MSG', price:285.61,  d1:0.30, d7:0.24,  d30:1.96, d365:11.48, held:false, shares:0,          unrlzPct:null},
-  {name:'Home Retail Group',        ticker:'HRG', price:270.48,  d1:0.42, d7:0.77,  d30:0.61, d365:2.34,  held:false, shares:0,          unrlzPct:null},
-  {name:'TC Music Industries',      ticker:'TMI', price:230.95,  d1:1.13, d7:0.05,  d30:0.86, d365:3.67,  held:true,  shares:6000000,    unrlzPct:3.858},
-  {name:'Insured On Us',            ticker:'IOU', price:177.00,  d1:0.06, d7:0.29,  d30:0.28, d365:3.76,  held:true,  shares:3000000,    unrlzPct:-0.612},
-  {name:'Tell Group Plc.',          ticker:'TGP', price:149.71,  d1:0.29, d7:1.38,  d30:1.59, d365:6.95,  held:false, shares:0,          unrlzPct:null},
-  {name:'I Industries Ltd.',        ticker:'IIL', price:131.84,  d1:0.19, d7:0.72,  d30:0.49, d365:6.09,  held:true,  shares:1719550,    unrlzPct:3.121},
-  {name:'West Side University',     ticker:'WSU', price:110.57,  d1:0.02, d7:0.35,  d30:2.41, d365:9.53,  held:false, shares:0,          unrlzPct:null},
-  {name:'Lo Squalo Waste',          ticker:'LOS', price:109.40,  d1:0.44, d7:0.39,  d30:0.16, d365:0.41,  held:true,  shares:7500000,    unrlzPct:1.287},
-  {name:'PointLess',                ticker:'PTS', price:77.35,   d1:1.26, d7:0.19,  d30:1.41, d365:2.61,  held:true,  shares:10000000,   unrlzPct:3.202},
-  {name:'Yazoo',                    ticker:'YAZ', price:51.53,   d1:0.12, d7:2.80,  d30:4.70, d365:2.10,  held:true,  shares:1048986403, unrlzPct:0.144},
+  {name:'Torn & Shanghai Banking',  ticker:'TSB', price:1174.85, d1:0.22, d7:1.59, d30:0.89, d365:3.88,  held:false, shares:0,          unrlzPct:null},
+  {name:'Torn City Investments',    ticker:'TCI', price:1185.27, d1:0.48, d7:0.26, d30:0.18, d365:5.96,  held:true,  shares:1500000,    unrlzPct:null},
+  {name:'Crude & Co',               ticker:'CNC', price:892.48,  d1:0.35, d7:0.20, d30:2.48, d365:8.89,  held:false, shares:0,          unrlzPct:null},
+  {name:'Feathery Hotels Group',    ticker:'FHG', price:871.18,  d1:0.93, d7:0.97, d30:0.87, d365:7.77,  held:true,  shares:6000000,    unrlzPct:null},
+  {name:'Mc Smoogle Corp',          ticker:'MCS', price:815.54,  d1:0.13, d7:0.26, d30:0.97, d365:6.81,  held:true,  shares:10850000,   unrlzPct:null},
+  {name:'Wind Lines Travel',        ticker:'WLT', price:799.97,  d1:0.22, d7:1.10, d30:1.40, d365:8.16,  held:true,  shares:9000000,    unrlzPct:null},
+  {name:'Symbiotic Ltd.',           ticker:'SYM', price:707.03,  d1:0.75, d7:1.09, d30:0.04, d365:3.78,  held:true,  shares:1500000,    unrlzPct:null},
+  {name:'Syscore MFG',              ticker:'SYS', price:683.06,  d1:0.43, d7:0.05, d30:1.95, d365:3.84,  held:false, shares:0,          unrlzPct:null},
+  {name:'Evil Ducks Candy Corp',    ticker:'EVL', price:652.93,  d1:0.01, d7:0.70, d30:0.94, d365:3.15,  held:false, shares:0,          unrlzPct:null},
+  {name:'Performance Ribaldry',     ticker:'PRN', price:607.76,  d1:0.55, d7:0.14, d30:0.04, d365:2.51,  held:true,  shares:1000000,    unrlzPct:null},
+  {name:'Munster Beverage Corp.',   ticker:'MUN', price:560.82,  d1:0.32, d7:0.06, d30:1.30, d365:5.27,  held:true,  shares:5000000,    unrlzPct:null},
+  {name:'Lucky Shot Casino',        ticker:'LSC', price:543.07,  d1:1.04, d7:0.14, d30:1.62, d365:2.31,  held:true,  shares:627147883,  unrlzPct:null},
+  {name:'International School TC',  ticker:'IST', price:522.11,  d1:0.49, d7:0.18, d30:1.24, d365:2.00,  held:false, shares:0,          unrlzPct:null},
+  {name:'TC Media Productions',     ticker:'TCP', price:519.06,  d1:0.04, d7:0.73, d30:1.01, d365:5.26,  held:false, shares:0,          unrlzPct:null},
+  {name:'Torn City Clothing',       ticker:'TCC', price:509.88,  d1:0.89, d7:0.21, d30:0.56, d365:3.23,  held:false, shares:0,          unrlzPct:null},
+  {name:'Big Al\'s Gun Shop',       ticker:'BAG', price:492.91,  d1:0.01, d7:1.96, d30:2.28, d365:5.24,  held:true,  shares:9000000,    unrlzPct:null},
+  {name:'Legal Authorities Group',  ticker:'LAG', price:457.25,  d1:0.36, d7:0.07, d30:2.95, d365:2.11,  held:false, shares:0,          unrlzPct:null},
+  {name:'Herbal Releaf Co.',        ticker:'CBD', price:404.49,  d1:0.30, d7:0.39, d30:0.16, d365:7.65,  held:false, shares:0,          unrlzPct:null},
+  {name:'Torn City Health Service', ticker:'THS', price:382.09,  d1:0.41, d7:0.48, d30:1.63, d365:6.81,  held:true,  shares:6717358,    unrlzPct:null},
+  {name:'Alcoholics Synonymous',    ticker:'ASS', price:358.36,  d1:0.23, d7:0.23, d30:0.59, d365:5.17,  held:false, shares:0,          unrlzPct:null},
+  {name:'The Torn City Times',      ticker:'TCT', price:322.24,  d1:0.00, d7:0.84, d30:0.28, d365:1.32,  held:true,  shares:100000,     unrlzPct:null},
+  {name:'Empty Lunchbox Traders',   ticker:'ELT', price:317.71,  d1:0.44, d7:1.59, d30:0.31, d365:2.16,  held:false, shares:0,          unrlzPct:null},
+  {name:'Grain',                    ticker:'GRN', price:313.86,  d1:0.13, d7:1.11, d30:2.60, d365:4.49,  held:true,  shares:500000,     unrlzPct:null},
+  {name:'Torn City Motors',         ticker:'TCM', price:300.82,  d1:0.39, d7:0.72, d30:0.46, d365:5.65,  held:true,  shares:1000000,    unrlzPct:null},
+  {name:'Eaglewood Mercenary',      ticker:'EWM', price:292.99,  d1:0.11, d7:1.83, d30:2.71, d365:6.74,  held:true,  shares:1000000,    unrlzPct:null},
+  {name:'Messaging Inc.',           ticker:'MSG', price:285.11,  d1:0.09, d7:0.09, d30:0.24, d365:11.61, held:false, shares:0,          unrlzPct:null},
+  {name:'Home Retail Group',        ticker:'HRG', price:270.26,  d1:0.06, d7:0.08, d30:0.93, d365:0.06,  held:false, shares:0,          unrlzPct:null},
+  {name:'TC Music Industries',      ticker:'TMI', price:231.89,  d1:0.32, d7:0.44, d30:0.23, d365:4.05,  held:true,  shares:6000000,    unrlzPct:null},
+  {name:'Insured On Us',            ticker:'IOU', price:173.28,  d1:0.10, d7:1.95, d30:3.42, d365:1.58,  held:true,  shares:3000000,    unrlzPct:null},
+  {name:'Tell Group Plc.',          ticker:'TGP', price:148.80,  d1:0.47, d7:0.61, d30:1.75, d365:6.14,  held:false, shares:0,          unrlzPct:null},
+  {name:'I Industries Ltd.',        ticker:'IIL', price:133.74,  d1:0.52, d7:1.36, d30:0.69, d365:6.38,  held:true,  shares:1719550,    unrlzPct:null},
+  {name:'West Side University',     ticker:'WSU', price:110.56,  d1:0.09, d7:0.01, d30:0.58, d365:11.37, held:false, shares:0,          unrlzPct:null},
+  {name:'Lo Squalo Waste',          ticker:'LOS', price:108.30,  d1:0.10, d7:1.17, d30:0.18, d365:0.41,  held:true,  shares:7500000,    unrlzPct:null},
+  {name:'PointLess',                ticker:'PTS', price:77.50,   d1:0.18, d7:0.16, d30:0.45, d365:4.48,  held:true,  shares:10000000,   unrlzPct:null},
+  {name:'Yazoo',                    ticker:'YAZ', price:52.66,   d1:0.02, d7:2.11, d30:2.19, d365:0.40,  held:true,  shares:1048986403, unrlzPct:null},
 ];
+
+// ═══════════════════════════════════════════════════════════
+//  PRICE HISTORY — localStorage self-accumulating tracker
+//  Saves a snapshot every 30 min; computes d1/d7/d30/d365 from
+//  real recorded prices instead of static snapshot values.
+// ═══════════════════════════════════════════════════════════
+const HIST_KEY          = 'darkfire_price_history';
+const HIST_INTERVAL     = 1800;   // min seconds between snapshots (30 min)
+const HIST_MAX_ENTRIES  = 3000;   // ~62 days at 30-min pace
+
+function loadPriceHistory() {
+  try {
+    const raw = localStorage.getItem(HIST_KEY);
+    return raw ? JSON.parse(raw) : { timestamps: [], prices: {} };
+  } catch(e) { return { timestamps: [], prices: {} }; }
+}
+
+function savePriceSnapshot() {
+  const now  = Math.floor(Date.now() / 1000);
+  const hist = loadPriceHistory();
+  const lastTs = hist.timestamps.length ? hist.timestamps[hist.timestamps.length - 1] : 0;
+  if (now - lastTs < HIST_INTERVAL) return; // too soon — skip
+
+  hist.timestamps.push(now);
+  allStocks.forEach(s => {
+    if (!hist.prices[s.ticker]) hist.prices[s.ticker] = [];
+    hist.prices[s.ticker].push(s.price);
+  });
+
+  // Prune oldest entries if over cap
+  if (hist.timestamps.length > HIST_MAX_ENTRIES) {
+    const cut = hist.timestamps.length - HIST_MAX_ENTRIES;
+    hist.timestamps = hist.timestamps.slice(cut);
+    Object.keys(hist.prices).forEach(t => { hist.prices[t] = hist.prices[t].slice(cut); });
+  }
+
+  try {
+    localStorage.setItem(HIST_KEY, JSON.stringify(hist));
+  } catch(e) {
+    // Storage full — halve history and retry
+    const half = Math.floor(hist.timestamps.length / 2);
+    hist.timestamps = hist.timestamps.slice(half);
+    Object.keys(hist.prices).forEach(t => { hist.prices[t] = hist.prices[t].slice(half); });
+    try { localStorage.setItem(HIST_KEY, JSON.stringify(hist)); } catch(e2) {}
+  }
+}
+
+function computeChangesFromHistory() {
+  const hist = loadPriceHistory();
+  if (!hist.timestamps || hist.timestamps.length < 2) return;
+
+  const now = Math.floor(Date.now() / 1000);
+  const PERIODS = [
+    { field: 'd1',   secs:    86400 },
+    { field: 'd7',   secs:   604800 },
+    { field: 'd30',  secs:  2592000 },
+    { field: 'd365', secs: 31536000 },
+  ];
+
+  allStocks.forEach(stock => {
+    const pxArr = hist.prices[stock.ticker];
+    if (!pxArr || pxArr.length < 2) return;
+
+    PERIODS.forEach(({ field, secs }) => {
+      const targetTs = now - secs;
+      let bestIdx = -1, bestDiff = Infinity;
+      hist.timestamps.forEach((ts, i) => {
+        const diff = Math.abs(ts - targetTs);
+        if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+      });
+      // Only use if the nearest snapshot is within 50% of the target window
+      if (bestIdx < 0 || bestDiff > secs * 0.5) return;
+      const oldPrice = pxArr[bestIdx];
+      if (!oldPrice || oldPrice <= 0 || isNaN(oldPrice)) return;
+      stock[field] = (stock.price - oldPrice) / oldPrice * 100;
+    });
+  });
+}
+
+function getHistoryCoverage() {
+  const hist = loadPriceHistory();
+  if (!hist.timestamps || hist.timestamps.length < 2) return null;
+  const now    = Math.floor(Date.now() / 1000);
+  const oldest = hist.timestamps[0];
+  const ageDays = (now - oldest) / 86400;
+  let covers;
+  if      (ageDays >= 365) covers = 'd1 · d7 · d30 · d365';
+  else if (ageDays >= 30)  covers = 'd1 · d7 · d30';
+  else if (ageDays >= 7)   covers = 'd1 · d7';
+  else if (ageDays >= 1)   covers = 'd1';
+  else                     covers = 'accumulating…';
+  return { days: Math.round(ageDays * 10) / 10, entries: hist.timestamps.length, covers };
+}
+
+function clearPriceHistory() {
+  if (!confirm('Clear all accumulated price history? The dashboard will re-accumulate real change data over the next 24h–365d.')) return;
+  localStorage.removeItem(HIST_KEY);
+  // Reset d1/d7/d30/d365 back to snapshot defaults
+  allStocks.forEach(s => { s.d1 = 0; s.d7 = 0; s.d30 = 0; s.d365 = 0; });
+  renderAll();
+  const btn = document.getElementById('clearHistBtn');
+  btn.textContent = '✓ Cleared';
+  setTimeout(() => { btn.textContent = '🗑 Clear History'; }, 2000);
+}
 
 // Default MTD trades (Apr 2026 — updated by live sell log)
 let mtdGain   = 464451820;
@@ -1418,6 +1524,10 @@ async function loadLiveData(apiKey) {
       if (!isNaN(d30))  stock.d30  = d30;
       if (!isNaN(d365)) stock.d365 = d365;
     });
+
+    // ── Save price snapshot & compute real changes from history ──
+    savePriceSnapshot();
+    computeChangesFromHistory();
   }
 
   // ── Update portfolio positions ──
@@ -1553,8 +1663,12 @@ function setBadgeLive(ts) {
   badge.textContent = '● LIVE';
   badge.className   = 'badge live';
   const fmt = ts.toLocaleTimeString('default', { hour: '2-digit', minute: '2-digit' });
+  const cov = getHistoryCoverage();
+  const histNote = cov
+    ? ` · History: ${cov.days}d (${cov.covers})`
+    : ' · History: accumulating…';
   document.getElementById('lastUpdated').textContent =
-    `Live data · refreshed ${fmt} · Manager: Darkfire [#1631210]`;
+    `Live data · refreshed ${fmt}${histNote} · Manager: Darkfire [#1631210]`;
 }
 
 function setBadgeError() {
